@@ -9,14 +9,13 @@ module SDOM
   , element
   , element_
   , ArrayChannel(..)
-  , ArrayContext
   , array
   , attach
   , unsafeSDOM
-  , mapContext
   , mapChannel
   , interpretChannel
   , withAsync
+  , unSDOM
   ) where
 
 import Prelude
@@ -35,7 +34,7 @@ import Data.Newtype (wrap)
 import Data.Profunctor (class Profunctor, dimap)
 import Data.Profunctor.Strong (class Strong, first, second)
 import Data.Traversable (traverse)
-import Data.Tuple (Tuple(..), fst, snd)
+import Data.Tuple (fst, snd)
 import Effect (Effect)
 import Effect.Ref as Ref
 import FRP.Event (Event, create, keepLatest, subscribe)
@@ -96,10 +95,9 @@ import Web.HTML.Window (document)
 -- |     (Tuple String b)
 -- |     (Tuple a b)
 -- | ```
-newtype SDOM channel context i o = SDOM
+newtype SDOM channel i o = SDOM
   (Node
-  -> context
-  -> i
+  -> Effect i
   -> Event { old :: i, new :: i }
   -> Effect
        { events :: Event (Either channel (i -> o))
@@ -120,48 +118,39 @@ newtype SDOM channel context i o = SDOM
 -- | - Return an `unsubscribe` function to clean up any event handlers when the
 -- |   component is removed.
 unsafeSDOM
-  :: forall channel context i o
+  :: forall channel i o
    . (Node
-     -> context
-     -> i
+     -> Effect i
      -> Event { old :: i, new :: i }
      -> Effect
           { events :: Event (Either channel (i -> o))
           , unsubscribe :: Effect Unit
           }
      )
-  -> SDOM channel context i o
+  -> SDOM channel i o
 unsafeSDOM = SDOM
-
--- | Change the context type of a component.
-mapContext
-  :: forall channel context context' i o
-   . (context' -> context)
-  -> SDOM channel context i o
-  -> SDOM channel context' i o
-mapContext f (SDOM sd) = SDOM \n ctx -> sd n (f ctx)
 
 -- | Interpret the event channel of a component.
 interpretChannel
-  :: forall channel channel' context i o
+  :: forall channel channel' i o
    . (Event channel -> Event (Either channel' (i -> o)))
-  -> SDOM channel context i o
-  -> SDOM channel' context i o
+  -> SDOM channel i o
+  -> SDOM channel' i o
 interpretChannel f (SDOM sd) =
-    SDOM \n context a e ->
-      overEvents f' <$> sd n context a e
+    SDOM \n a e ->
+      overEvents f' <$> sd n a e
   where
     f' = partitionMap identity >>> \{ left, right } -> f left <|> Right <$> right
 
 -- | Change the event channel type of a component.
 mapChannel
-  :: forall channel channel' context i o
+  :: forall channel channel' i o
    . (channel -> channel')
-  -> SDOM channel context i o
-  -> SDOM channel' context i o
+  -> SDOM channel i o
+  -> SDOM channel' i o
 mapChannel f (SDOM sd) =
-  SDOM \n context a e ->
-    overEvents (map (lmap f)) <$> sd n context a e
+  SDOM \n a e ->
+    overEvents (map (lmap f)) <$> sd n a e
 
 -- | A convenience function which provides the ability to use `Event`s
 -- | directly in a component's event channel.
@@ -185,26 +174,26 @@ mapChannel f (SDOM sd) =
 -- | forall channel context model. SDOM Unit channel context model
 -- | ```
 withAsync
-  :: forall channel context i o
-   . SDOM (Event (Either channel (i -> o))) context i o
-  -> SDOM channel context i o
+  :: forall channel i o
+   . SDOM (Event (Either channel (i -> o))) i o
+  -> SDOM channel i o
 withAsync = interpretChannel keepLatest
 
-instance functorSDOM :: Functor (SDOM channel context i) where
-  map f (SDOM sd) = SDOM \n context a e ->
-    overEvents (map (map (map f))) <$> sd n context a e
+instance functorSDOM :: Functor (SDOM channel i) where
+  map f (SDOM sd) = SDOM \n a e ->
+    overEvents (map (map (map f))) <$> sd n a e
 
-instance profunctorSDOM :: Profunctor (SDOM channel context) where
-  dimap f g (SDOM sd) = SDOM \n context a e ->
-    overEvents (map (map (dimap f g))) <$> sd n context (f a) (map (\{ old, new } -> { old: f old, new: f new }) e)
+instance profunctorSDOM :: Profunctor (SDOM channel) where
+  dimap f g (SDOM sd) = SDOM \n a e ->
+    overEvents (map (map (dimap f g))) <$> sd n (f <$> a) (map (\{ old, new } -> { old: f old, new: f new }) e)
 
-instance strongSDOM :: Strong (SDOM channel context) where
-  first (SDOM sd) = SDOM \n context (Tuple a _) e ->
-    overEvents (map (map first)) <$> sd n context a (map (\{ old, new } -> { old: fst old, new: fst new }) e)
-  second (SDOM sd) = SDOM \n context (Tuple _ b) e ->
-    overEvents (map (map second)) <$> sd n context b (map (\{ old, new } -> { old: snd old, new: snd new }) e)
+instance strongSDOM :: Strong (SDOM channel) where
+  first (SDOM sd) = SDOM \n ask e ->
+    overEvents (map (map first)) <$> sd n (fst <$> ask) (map (\{ old, new } -> { old: fst old, new: fst new }) e)
+  second (SDOM sd) = SDOM \n ask e ->
+    overEvents (map (map second)) <$> sd n (snd <$> ask) (map (\{ old, new } -> { old: snd old, new: snd new }) e)
 
-instance lazySDOM :: Lazy (SDOM channel context i o) where
+instance lazySDOM :: Lazy (SDOM channel i o) where
   defer f = SDOM \n -> unSDOM (f unit) n
 
 overEvents
@@ -215,11 +204,10 @@ overEvents
 overEvents f o = o { events = f o.events }
 
 unSDOM
-  :: forall channel context i o
-   . SDOM channel context i o
+  :: forall channel i o
+   . SDOM channel i o
   -> Node
-  -> context
-  -> i
+  -> Effect i
   -> Event { old :: i, new :: i }
   -> Effect
        { events :: Event (Either channel (i -> o))
@@ -244,21 +232,22 @@ unSDOM (SDOM f) = f
 -- |     }
 -- |     a
 -- | ```
-text :: forall channel context i o. (context -> i -> String) -> SDOM channel context i o
-text f = SDOM \n context model e -> do
+text :: forall channel i o. (i -> String) -> SDOM channel i o
+text f = SDOM \n ask e -> do
   doc <- window >>= document
-  tn <- createTextNode (f context model) (HTMLDocument.toDocument doc)
+  model <- ask
+  tn <- createTextNode (f model) (HTMLDocument.toDocument doc)
   _ <- appendChild (Text.toNode tn) n
   unsubscribe <- e `subscribe` \{ old, new } -> do
-    let oldValue = f context old
-        newValue = f context new
+    let oldValue = f old
+        newValue = f new
     when (oldValue /= newValue) $
       setTextContent newValue (Text.toNode tn)
   pure { unsubscribe, events: empty }
 
 -- | Create a component which renders a (static) text node.
-text_ :: forall channel context i o. String -> SDOM channel context i o
-text_ str = SDOM \n context model e -> do
+text_ :: forall channel i o. String -> SDOM channel i o
+text_ str = SDOM \n ask e -> do
   doc <- window >>= document
   tn <- createTextNode str (HTMLDocument.toDocument doc)
   _ <- appendChild (Text.toNode tn) n
@@ -283,9 +272,8 @@ text_ str = SDOM \n context model e -> do
 -- |     | r
 -- |     }
 -- | ```
-newtype Attr context model = Attr
-   ( context
-  -> Element
+newtype Attr model = Attr
+   ( Element
   -> { init :: model -> Effect Unit
      , update :: { old :: model, new :: model } -> Effect Unit
      }
@@ -297,9 +285,8 @@ newtype Attr context model = Attr
 -- | _Note_: most applications should not require this function. Consider using
 -- | the functions in the `SDOM.Attributes` module instead.
 unsafeAttr
-  :: forall context model
-   . ( context
-    -> Element
+  :: forall model
+   . ( Element
     -> { init :: model -> Effect Unit
        , update :: { old :: model
                    , new :: model
@@ -307,7 +294,7 @@ unsafeAttr
                 -> Effect Unit
        }
      )
-  -> Attr context model
+  -> Attr model
 unsafeAttr = Attr
 
 -- | An event handler which can be associated with an `element`.
@@ -326,8 +313,8 @@ unsafeAttr = Attr
 -- | > :type Events.click \_ _ -> unit
 -- | forall context. Handler context Unit
 -- | ```
-newtype Handler context e = Handler
-  (context
+newtype Handler i e = Handler
+  (i
   -> Element
   -> Effect
        { events :: Event e
@@ -342,13 +329,13 @@ newtype Handler context e = Handler
 -- | The second argument is a function which produces a result from the raw DOM
 -- | event object. The function also has access to the context of the component.
 handler
-  :: forall context e
+  :: forall i e
    . String
-  -> (context -> Event.Event -> e)
-  -> Handler context e
-handler evtName f = Handler \context e -> do
+  -> (i -> Event.Event -> e)
+  -> Handler i e
+handler evtName f = Handler \i e -> do
   { event, push } <- create
-  listener <- eventListener (push <<< f context)
+  listener <- eventListener (push <<< f i)
   let target = Element.toEventTarget e
       unsubscribe = removeEventListener (wrap evtName) listener false target
   addEventListener (wrap evtName) listener false target
@@ -412,32 +399,33 @@ handler evtName f = Handler \context e -> do
 -- |     }
 -- | ```
 element
-  :: forall channel context i o
+  :: forall channel i o
    . String
-  -> Array (Attr context i)
-  -> Array (Handler context (Either channel (i -> o)))
-  -> Array (SDOM channel context i o)
-  -> SDOM channel context i o
-element el attrs handlers children = SDOM \n context model updates -> do
+  -> Array (Attr i)
+  -> Array (Handler i (Either channel (i -> o)))
+  -> Array (SDOM channel i o)
+  -> SDOM channel i o
+element el attrs handlers children = SDOM \n ask updates -> do
   doc <- window >>= document
+  model <- ask
   e <- createElement el (HTMLDocument.toDocument doc)
   _ <- appendChild (Element.toNode e) n
-  let setAttr :: Attr context i -> Effect (Effect Unit)
+  let setAttr :: Attr i -> Effect (Effect Unit)
       setAttr (Attr attr) = do
-        let { init, update } = attr context e
+        let { init, update } = attr e
         init model
         updates `subscribe` update
 
       setHandler
-        :: Handler context (Either channel (i -> o))
+        :: Handler i (Either channel (i -> o))
         -> Effect
              { events :: Event (Either channel (i -> o))
              , unsubscribe :: Effect Unit
              }
-      setHandler (Handler h) = h context e
+      setHandler (Handler h) = ask >>= \i -> h i e
   unsubscribers <- traverse setAttr attrs
   evts <- traverse setHandler handlers
-  childrenEvts <- traverse (\child -> unSDOM child (Element.toNode e) context model updates) children
+  childrenEvts <- traverse (\child -> unSDOM child (Element.toNode e) ask updates) children
   pure
     { events:
         oneOfMap _.events evts
@@ -463,10 +451,10 @@ element el attrs handlers children = SDOM \n context model updates -> do
 -- |   SDOM context channel i o
 -- | ```
 element_
-  :: forall channel context i o
+  :: forall channel i o
    . String
-  -> Array (SDOM channel context i o)
-  -> SDOM channel context i o
+  -> Array (SDOM channel i o)
+  -> SDOM channel i o
 element_ el = element el [] []
 
 removeLastNChildren :: Int -> Node -> Effect Unit
@@ -488,14 +476,6 @@ data ArrayChannel i channel
   = Parent channel
   | Here (Array i -> Array i)
 
--- | The context of subcomponent in an `array` component includes the current
--- | context inherited from the parent, as well as the index of the current
--- | subcomponent.
-type ArrayContext context =
-  { index :: Int
-  , parent :: context
-  }
-
 -- | Create a component which renders an array of subcomponents.
 -- |
 -- | The first argument is the name of the HTML element used as the container.
@@ -512,22 +492,22 @@ type ArrayContext context =
 -- |   arrays should not present any issues, but large arrays might if edits
 -- |   typically take place away from the end of the array.
 array
-  :: forall channel context i
+  :: forall channel i
    . String
-  -> SDOM (ArrayChannel i channel) (ArrayContext context) i i
-  -> SDOM channel context (Array i) (Array i)
+  -> SDOM (ArrayChannel i channel) i i
+  -> SDOM channel (Array i) (Array i)
 array el sd = SDOM arrayImpl where
   arrayImpl
     :: Node
-    -> context
-    -> Array i
+    -> Effect (Array i)
     -> Event { old :: Array i, new :: Array i }
     -> Effect
          { events :: Event (Either channel (Array i -> Array i))
          , unsubscribe :: Effect Unit
          }
-  arrayImpl n context models updates = do
+  arrayImpl n ask updates = do
     doc <- window >>= document
+    models <- ask
     e <- createElement el (HTMLDocument.toDocument doc)
     _ <- appendChild (Element.toNode e) n
     unsubscribers <- Ref.new Nil
@@ -540,8 +520,7 @@ array el sd = SDOM arrayImpl where
               fragment <- createDocumentFragment (HTMLDocument.toDocument doc)
               let frag = DocumentFragment.toNode fragment
                   here xs = unsafePartial (xs `unsafeIndex` idx)
-                  childCtx = { index: idx, parent: context }
-              { events, unsubscribe } <- unSDOM sd frag childCtx (here new_) (filterMap (\{ old, new } -> { old: _, new: _ } <$> (old !! idx) <*> (new !! idx)) updates)
+              { events, unsubscribe } <- unSDOM sd frag (here <$> ask) (filterMap (\{ old, new } -> { old: _, new: _ } <$> (old !! idx) <*> (new !! idx)) updates)
               unsubscribe1 <- events `subscribe` \ev ->
                 case ev of
                   Left (Parent other) -> push (Left other)
@@ -582,7 +561,7 @@ attach
   :: forall model
    . Element
   -> model
-  -> SDOM Void Unit model model
+  -> SDOM Void model model
   -> Effect
        { push :: (model -> model) -> Effect Unit
        , detach :: Effect Unit
@@ -593,7 +572,7 @@ attach root model v = do
   { event, push } <- create
   fragment <- createDocumentFragment (HTMLDocument.toDocument document)
   let n = DocumentFragment.toNode fragment
-  { events, unsubscribe } <- unSDOM v n unit model event
+  { events, unsubscribe } <- unSDOM v n (Ref.read modelRef) event
   let pushNewModel :: Either Void (model -> model) -> Effect Unit
       pushNewModel e = do
         oldModel <- Ref.read modelRef

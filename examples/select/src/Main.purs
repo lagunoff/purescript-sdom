@@ -39,8 +39,8 @@ priceOf SuperWidget = "$99.99"
 priceOf UltraWidget = "$999.99"
 
 select
-  :: forall channel context
-   . SDOM channel context WidgetType WidgetType
+  :: forall channel
+   . SDOM channel WidgetType WidgetType
 select =
   E.div_
     [ E.h1_ [ text_ "Select" ]
@@ -54,7 +54,7 @@ select =
           , UltraWidget
           ]
       ]
-    , E.p_ [ text \_ selectedProduct -> "The price is " <> priceOf selectedProduct ]
+    , E.p_ [ text \selectedProduct -> "The price is " <> priceOf selectedProduct ]
     ]
 
 main :: Effect Unit

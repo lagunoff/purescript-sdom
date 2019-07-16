@@ -11,10 +11,10 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | Render a textbox component whose model is a `String`.
 -- |
 -- | _Note_: the model type can easily be changed using a lens.
-textbox :: forall channel context. SDOM channel context String String
+textbox :: forall channel. SDOM channel String String
 textbox =
   E.input
-    [ A.value \_ val -> val ]
+    [ A.value \val -> val ]
     [ Events.change \_ e -> pure \_ -> (unsafeCoerce e).target.value ]
     []
 
@@ -26,24 +26,24 @@ textbox =
 -- | The second and third arguments encapsulate the `checked` status of the
 -- | checkbox as a getter/setter pair.
 checkbox
-  :: forall model channel context
-   . (context -> model -> String)
+  :: forall model channel
+   . (model -> String)
   -> (model -> Boolean)
   -> (model -> Boolean -> model)
-  -> SDOM channel context model model
+  -> SDOM channel model model
 checkbox name getChecked setChecked =
   E.span_
     [ E.input
-        [ A.type_ \_ _ -> "checkbox"
-        , A.checked \_ model -> getChecked model
-        , A.id \context model -> name context model
+        [ A.type_ \_ -> "checkbox"
+        , A.checked \model -> getChecked model
+        , A.id \model -> name model
         ]
         [ Events.change \_ e -> pure \model ->
             setChecked model (unsafeCoerce e).target.checked
         ]
         []
     , E.label
-        [ A.for \context model -> name context model ]
+        [ A.for \model -> name model ]
         []
         []
     ]
@@ -59,18 +59,18 @@ checkbox name getChecked setChecked =
 -- |
 -- | The fifth argument is an array of all available options.
 select
-  :: forall option channel context
+  :: forall option channel
    . (option -> { key :: String, label :: String })
   -> (String -> option)
   -> Array option
-  -> SDOM channel context option option
+  -> SDOM channel option option
 select fromOption toOption options =
   E.select
-    [ A.value \_ value -> (fromOption value).key ]
+    [ A.value \value -> (fromOption value).key ]
     [ Events.change \_ e -> pure \_ ->
         toOption (unsafeCoerce e).target.value
     ]
     (options <#> \option ->
       let { key, label } = fromOption option
-       in E.option [ A.value \_ _ -> key ] [] [ text_ label ]
+       in E.option [ A.value \_ -> key ] [] [ text_ label ]
     )

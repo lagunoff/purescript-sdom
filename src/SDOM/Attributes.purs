@@ -16,68 +16,68 @@ import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (removeAttribute, setAttribute)
 import Web.HTML.HTMLInputElement (setChecked, setDisabled, setValue)
 
-attr :: forall context model. String -> (context -> model -> String) -> Attr context model
+attr :: forall model. String -> (model -> String) -> Attr model
 attr attrName f =
-  unsafeAttr \context e ->
-    { init: \model -> setAttribute attrName (f context model) e
+  unsafeAttr \e ->
+    { init: \model -> setAttribute attrName (f model) e
     , update: \{ old, new } -> do
-        let oldValue = f context old
-            newValue = f context new
+        let oldValue = f old
+            newValue = f new
         when (oldValue /= newValue) (setAttribute attrName newValue e)
     }
 
-for :: forall context model. (context -> model -> String) -> Attr context model
+for :: forall model. (model -> String) -> Attr model
 for = attr "for"
 
-id :: forall context model. (context -> model -> String) -> Attr context model
+id :: forall model. (model -> String) -> Attr model
 id = attr "id"
 
-className :: forall context model. (context -> model -> String) -> Attr context model
+className :: forall model. (model -> String) -> Attr model
 className = attr "class"
 
-name :: forall context model. (context -> model -> String) -> Attr context model
+name :: forall model. (model -> String) -> Attr model
 name = attr "name"
 
-type_ :: forall context model. (context -> model -> String) -> Attr context model
+type_ :: forall model. (model -> String) -> Attr model
 type_ = attr "type"
 
-value :: forall context model. (context -> model -> String) -> Attr context model
+value :: forall model. (model -> String) -> Attr model
 value f =
-  unsafeAttr \context e ->
+  unsafeAttr \e ->
     let update s = do
           setValue s (unsafeCoerce e)
           setAttribute "value" s e
-     in { init: \model -> update (f context model)
+     in { init: \model -> update (f model)
         , update: \{ old, new } -> do
-            let oldValue = f context old
-                newValue = f context new
+            let oldValue = f old
+                newValue = f new
             when (oldValue /= newValue) (update newValue)
         }
 
-checked :: forall context model. (context -> model -> Boolean) -> Attr context model
+checked :: forall model. (model -> Boolean) -> Attr model
 checked f =
-  unsafeAttr \context e ->
+  unsafeAttr \e ->
     let update b = do
           setChecked b (unsafeCoerce e)
           if b then setAttribute "checked" "checked" e
                else removeAttribute "checked" e
-     in { init: \model -> update (f context model)
+     in { init: \model -> update (f model)
         , update: \{ old, new } -> do
-            let oldValue = f context old
-                newValue = f context new
+            let oldValue = f old
+                newValue = f new
             when (oldValue /= newValue) (update newValue)
         }
 
-disabled :: forall context model. (context -> model -> Boolean) -> Attr context model
+disabled :: forall model. (model -> Boolean) -> Attr model
 disabled f =
-  unsafeAttr \context e ->
+  unsafeAttr \e ->
     let update b = do
           setDisabled b (unsafeCoerce e)
           if b then setAttribute "disabled" "disabled" e
                else removeAttribute "disabled" e
-     in { init: \model -> update (f context model)
+     in { init: \model -> update (f model)
         , update: \{ old, new } -> do
-            let oldValue = f context old
-                newValue = f context new
+            let oldValue = f old
+                newValue = f new
             when (oldValue /= newValue) (update newValue)
         }

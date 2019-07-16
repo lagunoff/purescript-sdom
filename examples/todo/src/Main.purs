@@ -10,7 +10,7 @@ import Data.Profunctor (dimap)
 import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import Effect.Exception (throw)
-import SDOM (ArrayChannel(..), ArrayContext, SDOM, attach, array, text, text_)
+import SDOM (ArrayChannel(..), SDOM, attach, array, text, text_)
 import SDOM.Components (textbox, checkbox)
 import SDOM.Elements as E
 import SDOM.Events as Events
@@ -20,26 +20,27 @@ import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.Window (document)
 
 type Task =
-  { description :: String
+  { index :: Int
+  , description :: String
   , completed :: Boolean
   }
 
 emptyTask :: Task
 emptyTask =
-  { description: ""
+  { index: -1
+  , description: ""
   , completed: false
   }
 
 task
-  :: forall channel context
+  :: forall channel
    . SDOM
        (ArrayChannel Task channel)
-       (ArrayContext context)
        Task
        Task
 task = E.span_
   [ checkbox
-      (\{ index } _ -> "task-" <> show index)
+      (\{ index } -> "task-" <> show index)
       _.completed
       (_ { completed = _ })
   , prop (SProxy :: SProxy "description") textbox
@@ -54,17 +55,17 @@ type TaskList =
   }
 
 taskList
-  :: forall channel context
-   . SDOM channel context TaskList TaskList
+  :: forall channel
+   . SDOM channel TaskList TaskList
 taskList = dimap _.tasks { tasks: _ } $
     E.div_
       [ E.h1_ [ text_ "Task List" ]
       , E.button
           []
-          [ Events.click \_ _ -> pure \xs -> xs <> [emptyTask] ]
+          [ Events.click \_ _ -> pure \xs -> xs <> [emptyTask { index = length xs }] ]
           [ text_ "＋ New Task" ]
       , array "ol" (E.li_ [ task ])
-      , E.p_ [ text \_ -> summaryLabel ]
+      , E.p_ [ text summaryLabel ]
       ]
   where
     summaryLabel =

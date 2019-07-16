@@ -3,14 +3,15 @@ module Main where
 import Prelude
 
 import Control.Lazy (defer)
+import Data.Array (intercalate, mapWithIndex)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Lens (lens')
+import Data.Lens (Lens', lens')
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Exception (throw)
-import SDOM (ArrayChannel(..), SDOM, array, attach, mapContext, interpretChannel, text, text_)
+import SDOM (ArrayChannel(..), SDOM, array, attach, interpretChannel, text, text_)
 import SDOM.Attributes as A
 import SDOM.Elements as E
 import SDOM.Events as Events
@@ -27,13 +28,7 @@ data TreeChannel i channel
   = ParentChannel channel
   | ModifyRoot (Tree i -> Tree i)
 
-data TreeContext context
-  = Root context
-  | TreeContext Int (TreeContext context)
-
-renderContext :: forall context. TreeContext context -> String
-renderContext (Root _) = "Root"
-renderContext (TreeContext i ctx) = renderContext ctx <> " / " <> show i
+type LeafModel a = { path :: Array Int, here :: a }
 
 buildTree :: Int -> Tree Boolean
 buildTree 0 = Tree false []
@@ -41,27 +36,24 @@ buildTree n = Tree false [ t, t ]
   where t = buildTree (n - 1)
 
 tree
-  :: forall channel context model
+  :: forall channel model
    . (model -> Boolean)
-  -> SDOM (TreeChannel model channel) (TreeContext context) model model
-  -> SDOM channel context (Tree model) (Tree model)
-tree getExpanded leaf = interpretChannel (map treeChannel) (go leaf)
+  -> SDOM (TreeChannel model channel) (LeafModel model) (LeafModel model)
+  -> SDOM channel (Tree model) (Tree model)
+tree getExpanded leaf = interpretChannel (map treeChannel) (_emptyPath $ go leaf)
   where
-    go :: forall channel' context'
-        . SDOM channel' (TreeContext context') model model
-       -> SDOM channel' context' (Tree model) (Tree model)
+    go :: forall channel'
+        . SDOM channel' (LeafModel model) (LeafModel model)
+       -> SDOM channel' (LeafModel (Tree model)) (LeafModel (Tree model))
     go l = defer \_ ->
       E.li_
-        [ mapContext Root
-            $ lens' (\(Tree lf bs) -> Tuple lf (_ `Tree` bs))
-            $ l
-        , E.span [ A.className \_ (Tree model _) -> if getExpanded model then "" else "collapsed" ] []
-            [ lens' (\(Tree lf bs) -> Tuple bs (Tree lf))
+        [ _inHere l
+        , E.span [ A.className \{ here: Tree model _ } -> if getExpanded model then "" else "collapsed" ] []
+            [ _inPath
               $ array "ul"
               $ go
               $ interpretChannel (map (lmap Parent <<< Left))
-              $ mapContext stepCtx
-              $ l
+                l
             ]
         ]
 
@@ -71,33 +63,42 @@ tree getExpanded leaf = interpretChannel (map treeChannel) (go leaf)
     treeChannel (ParentChannel c) = Left c
     treeChannel (ModifyRoot f) = Right f
 
-    stepCtx :: forall context'
-             . TreeContext { index :: Int , parent :: context' }
-            -> TreeContext context'
-    stepCtx (Root { index, parent }) = TreeContext index (Root parent)
-    stepCtx (TreeContext index context) = TreeContext index (stepCtx context)
+    _inHere 
+      :: forall a
+       . Lens' (LeafModel (Tree a)) (LeafModel a)
+    _inHere = lens' (\{ path, here: Tree lf bs } -> Tuple { path, here: lf } (({ path, here: _}) <<< (_ `Tree` bs) <<< _.here))
+
+    _inPath
+      :: forall a
+       . Lens' (LeafModel (Tree a)) (Array (LeafModel (Tree a)))
+    _inPath = lens' \{ path, here: Tree lf bs } -> Tuple (mapWithIndex (\idx here -> { path: path <> [idx], here }) bs) (\bs' -> { path, here: Tree lf (map _.here bs') })
+
+    _emptyPath
+      :: forall a
+       . Lens' a (LeafModel a)
+    _emptyPath = lens' \here -> Tuple { path: [], here } _.here
+
 
 node
-  :: forall channel context
+  :: forall channel
    . SDOM
        (TreeChannel Boolean channel)
-       (TreeContext context)
-       Boolean
-       Boolean
+       (LeafModel Boolean)
+       (LeafModel Boolean)
 node = E.span_ [ E.button
                    []
-                   [ Events.click \_ b -> Right not ]
-                   [ text \_ expanded -> if expanded then "-" else "+" ]
-               , text \ctx _ -> renderContext ctx
+                   [ Events.click \_ b -> Right (\{ path, here } -> { here: not here, path }) ]
+                   [ text \{ here } -> if here then "-" else "+" ]
+               , text \{ path } -> intercalate " / " $ ["Root"] <> map show path
                ]
 
 app
-  :: forall channel context
-   . SDOM channel context (Tree Boolean) (Tree Boolean)
+  :: forall channel
+   . SDOM channel (Tree Boolean) (Tree Boolean)
 app =
   E.div_
     [ E.h1_ [ text_ "Tree" ]
-    , E.div [ A.id \_ _ -> "tree" ] [] [ tree identity node ]
+    , E.div [ A.id \_ -> "tree" ] [] [ tree identity node ]
     ]
 
 main :: Effect Unit

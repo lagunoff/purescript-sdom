@@ -27,25 +27,24 @@ type State =
   }
 
 counter
-  :: forall context
-   . SDOM Mode context State State
+  :: SDOM Mode State State
 counter =
   E.div_
     [ E.h1_ [ text_ "Async" ]
-    , E.p_ [ text \_ { value } -> show value ]
+    , E.p_ [ text \{ value } -> show value ]
     , E.p_
       [ E.button
-          [ A.disabled \_ { mode } -> mode == Decreasing ]
+          [ A.disabled \{ mode } -> mode == Decreasing ]
           [ Events.click \_ _ -> Left Decreasing ]
           [ text_ "Decrement" ]
       , text_ " "
       , E.button
-          [ A.disabled \_ { mode } -> mode == Neither ]
+          [ A.disabled \{ mode } -> mode == Neither ]
           [ Events.click \_ _ -> Left Neither ]
           [ text_ "Stop" ]
       , text_ " "
       , E.button
-        [ A.disabled \_ { mode } -> mode == Increasing ]
+        [ A.disabled \{ mode } -> mode == Increasing ]
         [ Events.click \_ _ -> Left Increasing ]
         [ text_ "Increment" ]
       ]
@@ -54,7 +53,7 @@ counter =
 -- We must interpret the event channel (of type `Mode`) using the
 -- `mapChannel` function. We can return an `Event`, which gives us the
 -- ability to deliver results asynchronously using `withAsync`.
-counter_ :: forall channel context. SDOM channel context State State
+counter_ :: forall channel. SDOM channel State State
 counter_ =
     withAsync (mapChannel (map Right <<< interpreter) counter)
   where

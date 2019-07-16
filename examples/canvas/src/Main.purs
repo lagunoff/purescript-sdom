@@ -25,9 +25,10 @@ import Web.HTML (window)
 import Web.HTML.HTMLDocument (toDocument, toNonElementParentNode)
 import Web.HTML.Window (document)
 
-drawing :: forall channel context model. SDOM channel context Drawing model
-drawing = unsafeSDOM \node _ d updates -> do
+drawing :: forall channel model. SDOM channel Drawing model
+drawing = unsafeSDOM \node ask updates -> do
   doc <- window >>= document
+  d <- ask
   canvasEl <- createElement "canvas" (toDocument doc)
   let canvas = unsafeCoerce canvasEl
   _ <- setCanvasWidth canvas 200.0
@@ -47,8 +48,8 @@ renderCircle radius =
   <> filled (fillColor white) (circle 100.0 100.0 (toNumber radius))
 
 app
-  :: forall channel context
-   . SDOM channel context Int Int
+  :: forall channel
+   . SDOM channel Int Int
 app =
   E.div_
     [ E.h1_ [ text_ "Canvas" ]

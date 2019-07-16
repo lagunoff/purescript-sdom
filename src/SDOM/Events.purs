@@ -4,13 +4,13 @@ import SDOM
 import Web.Event.Event as Event
 
 change
-  :: forall context e
-  . (context -> Event.Event -> e)
-  -> Handler context e
+  :: forall i e
+  . (i -> Event.Event -> e)
+  -> Handler i e
 change = handler "change"
 
 click
-  :: forall context e
-  . (context -> Event.Event -> e)
-  -> Handler context e
+  :: forall i e
+  . (i -> Event.Event -> e)
+  -> Handler i e
 click = handler "click"
