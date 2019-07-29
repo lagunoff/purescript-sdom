@@ -16,7 +16,7 @@ import Web.DOM (Element)
 textbox :: forall channel. Gui Element channel String String
 textbox =
   E.input
-    [ A.value \val -> val, Events.change \_ e -> GuiEvent.EventFn \_ -> (unsafeCoerce e).target.value ]
+    [ A.value \val -> val, Events.change \_ e -> GuiEvent.EventStep \_ -> (unsafeCoerce e).target.value ]
     []
 
 -- | Render a checkbox and an accompanying `label` inside a `span`.
@@ -38,7 +38,7 @@ checkbox name getChecked setChecked =
         [ A.type_ \_ -> "checkbox"
         , A.checked \model -> getChecked model
         , A.id \model -> name model
-        , Events.change \_ e -> GuiEvent.EventFn \model ->
+        , Events.change \_ e -> GuiEvent.EventStep \model ->
             setChecked model $ not $ getChecked model
         ]
         []
@@ -66,7 +66,7 @@ select
 select fromOption toOption options =
   E.select
     [ A.value \value -> (fromOption value).key
-    , Events.change \_ e -> GuiEvent.EventFn \_ -> toOption (unsafeCoerce e).target.value
+    , Events.change \_ e -> GuiEvent.EventStep \_ -> toOption (unsafeCoerce e).target.value
     ]
     (options <#> \option ->
       let { key, label } = fromOption option

@@ -8,21 +8,21 @@ module SDOM.GuiEvent
 import Prelude
 
 data GuiEvent ui channel i o
-  = EventChan channel
-  | EventGui ui
-  | EventFn (i -> o)
+  = EventEmit channel
+  | EventRef ui
+  | EventStep (i -> o)
 
 mapChannel :: forall ui channel channel' i o. (channel -> channel') -> GuiEvent ui channel i o -> GuiEvent ui channel' i o
-mapChannel f (EventChan channel) = EventChan $ f channel
-mapChannel f (EventGui ui) = EventGui ui
-mapChannel f (EventFn fn) = EventFn fn
+mapChannel f (EventEmit channel) = EventEmit $ f channel
+mapChannel f (EventRef ui) = EventRef ui
+mapChannel f (EventStep fn) = EventStep fn
 
 mapGui :: forall ui ui' channel i o. (ui -> ui') -> GuiEvent ui channel i o -> GuiEvent ui' channel i o
-mapGui f (EventGui ui) = EventGui $ f ui
-mapGui f (EventChan channel) = EventChan channel
-mapGui f (EventFn fn) = EventFn fn
+mapGui f (EventRef ui) = EventRef $ f ui
+mapGui f (EventEmit channel) = EventEmit channel
+mapGui f (EventStep fn) = EventStep fn
 
 mapFn :: forall ui channel i i' o o'. ((i -> o) -> (i' -> o')) -> GuiEvent ui channel i o -> GuiEvent ui channel i' o'
-mapFn f (EventFn fn) = EventFn $ f fn
-mapFn f (EventGui ui) = EventGui ui
-mapFn f (EventChan channel) = EventChan channel
+mapFn f (EventStep fn) = EventStep $ f fn
+mapFn f (EventRef ui) = EventRef ui
+mapFn f (EventEmit channel) = EventEmit channel

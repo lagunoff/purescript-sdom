@@ -46,7 +46,7 @@ task = E.span_
       (_ { completed = _ })
   , prop (SProxy :: SProxy "description") textbox
   , E.button
-      [ Events.click \{ id } _ -> GuiEvent.EventChan (Here (filter (_.id >>> (_ /= id))))]
+      [ Events.click \{ id } _ -> GuiEvent.EventEmit (Here (filter (_.id >>> (_ /= id))))]
       [ text_ "✕" ]
   ]
 
@@ -62,7 +62,7 @@ taskList = dimap _.tasks { tasks: _ } $
     E.div_
       [ E.h1_ [ text_ "Task List" ]
       , E.button
-          [ Events.click \_ _ -> GuiEvent.EventFn \xs -> xs <> [emptyTask { id = length xs }] ]
+          [ Events.click \_ _ -> GuiEvent.EventStep \xs -> xs <> [emptyTask { id = length xs }] ]
           [ text_ "＋ New Task" ]
       , array "ol" (E.li_ [ task ])
       , E.p_ [ text summaryLabel ]
