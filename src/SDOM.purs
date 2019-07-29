@@ -1,8 +1,15 @@
 module SDOM
   ( SDOM
+  , Sink
+  , Track
+  , mapTrack
   , class ToNode
   , toNode
   , Gui
+  , GuiEvent(..)
+  , mapEmit
+  , mapRef
+  , mapStep
   , text
   , text_
   , Attr
@@ -43,8 +50,6 @@ import Effect (Effect)
 import Effect.Ref as Ref
 import FRP.Event (Event, create, keepLatest, makeEvent, subscribe)
 import Partial.Unsafe (unsafePartial)
-import SDOM.GuiEvent (GuiEvent)
-import SDOM.GuiEvent as GuiEvent
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM (Element, Node, NodeList, Text)
 import Web.DOM.Document (createDocumentFragment, createElement, createTextNode, fromNode)
@@ -117,6 +122,26 @@ mapTrack f o = { ask, updates } where
   ask = map f o.ask
   updates = map (\{ old, new } -> { old: f old, new: f new }) o.updates
 
+data GuiEvent ui channel i o
+  = EventEmit channel
+  | EventRef ui
+  | EventStep (i -> o)
+
+mapEmit :: forall ui channel channel' i o. (channel -> channel') -> GuiEvent ui channel i o -> GuiEvent ui channel' i o
+mapEmit f (EventEmit channel) = EventEmit $ f channel
+mapEmit f (EventRef ui) = EventRef ui
+mapEmit f (EventStep fn) = EventStep fn
+
+mapRef :: forall ui ui' channel i o. (ui -> ui') -> GuiEvent ui channel i o -> GuiEvent ui' channel i o
+mapRef f (EventRef ui) = EventRef $ f ui
+mapRef f (EventEmit channel) = EventEmit channel
+mapRef f (EventStep fn) = EventStep fn
+
+mapStep :: forall ui channel i i' o o'. ((i -> o) -> (i' -> o')) -> GuiEvent ui channel i o -> GuiEvent ui channel i' o'
+mapStep f (EventStep fn) = EventStep $ f fn
+mapStep f (EventRef ui) = EventRef ui
+mapStep f (EventEmit channel) = EventEmit channel
+
 type SDOM channel i o = Gui Element channel i o
 
 class ToNode n where
@@ -150,7 +175,7 @@ mapChannel
   -> Gui ui channel i o
   -> Gui ui channel' i o
 mapChannel f (Gui create) =
-  Gui \model sink -> create model (sink <<< GuiEvent.mapChannel f)
+  Gui \model sink -> create model (sink <<< mapEmit f)
 
 -- | A convenience function which provides the ability to use `Event`s
 -- | directly in a component's event channel.
@@ -181,17 +206,17 @@ mapChannel f (Gui create) =
 
 instance functorSDOM :: Functor (Gui ui channel i) where
   map f (Gui create) =
-    Gui \model sink -> create model (sink <<< GuiEvent.mapFn (_ >>> f))
+    Gui \model sink -> create model (sink <<< mapStep (_ >>> f))
 
 instance profunctorGui :: Profunctor (Gui ui channel) where
   dimap f g (Gui create) =
-    Gui \model sink -> create (mapTrack f model) (sink <<< GuiEvent.mapFn (\fn -> g <<< fn <<< f))
+    Gui \model sink -> create (mapTrack f model) (sink <<< mapStep (\fn -> g <<< fn <<< f))
 
 instance strongSDOM :: Strong (Gui ui channel) where
   first (Gui create) =
-    Gui \model sink -> create (mapTrack fst model) (sink <<< GuiEvent.mapFn (first))
+    Gui \model sink -> create (mapTrack fst model) (sink <<< mapStep (first))
   second (Gui create) =
-    Gui \model sink -> create (mapTrack snd model) (sink <<< GuiEvent.mapFn (second))
+    Gui \model sink -> create (mapTrack snd model) (sink <<< mapStep (second))
 
 instance lazyGui :: Lazy (Gui ui channel i o) where
   defer f = Gui \model -> unSDOM (f unit) model
@@ -352,22 +377,22 @@ handler evtName f = Handler \ask sink el -> do
 element
   :: forall channel i o
    . String
-  -> Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+  -> Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 element el attrs children = Gui \track@{ ask, updates } sink -> do
   doc <- window >>= document
   model <- ask
   e <- createElement el (HTMLDocument.toDocument doc)
-  let setAttr :: Attr i (GuiEvent.GuiEvent Element channel i o) -> Effect (Effect Unit)
+  let setAttr :: Attr i (GuiEvent Element channel i o) -> Effect (Effect Unit)
       setAttr (Attr setup) = setup track e
       setAttr (Handler setup) = setup ask sink e
   unsubscribers <- traverse setAttr attrs
   childrenEvts <- flip traverseWithIndex children \idx child -> do
-    let childSink :: Sink (GuiEvent.GuiEvent Element channel i o)
-        childSink (GuiEvent.EventEmit channel) = sink (GuiEvent.EventEmit channel)
-        childSink (GuiEvent.EventStep fn) = sink (GuiEvent.EventStep fn)
-        childSink (GuiEvent.EventRef el) = childNodes (Element.toNode e) >>= NodeList.item idx >>= case _ of
+    let childSink :: Sink (GuiEvent Element channel i o)
+        childSink (EventEmit channel) = sink (EventEmit channel)
+        childSink (EventStep fn) = sink (EventStep fn)
+        childSink (EventRef el) = childNodes (Element.toNode e) >>= NodeList.item idx >>= case _ of
           Just oldEl -> void $ replaceChild (Element.toNode el) oldEl (Element.toNode e)
           Nothing -> pure unit
     { ui, unsubscribe } <- unSDOM child track childSink
@@ -453,12 +478,12 @@ array el sd = Gui \{ ask, updates } sink -> do
             let here xs = unsafePartial (xs `unsafeIndex` idx)
                 track = { ask: ask >>= (here >>> pure), updates: chiildUpdates }
                 chiildUpdates = filterMap (\{ old, new } -> { old: _, new: _ } <$> (old !! idx) <*> (new !! idx)) updates
-                childSink (GuiEvent.EventEmit (Parent other)) = sink (GuiEvent.EventEmit other)
-                childSink (GuiEvent.EventEmit (Here fi)) = sink (GuiEvent.EventStep fi)
-                childSink (GuiEvent.EventRef ui) = childNodes (Element.toNode e) >>= NodeList.item idx >>= case _ of
+                childSink (EventEmit (Parent other)) = sink (EventEmit other)
+                childSink (EventEmit (Here fi)) = sink (EventStep fi)
+                childSink (EventRef ui) = childNodes (Element.toNode e) >>= NodeList.item idx >>= case _ of
                   Just oldEl -> void $ replaceChild (Element.toNode ui) oldEl (Element.toNode e)
                   Nothing -> pure unit
-                childSink (GuiEvent.EventStep f) = sink (GuiEvent.EventStep \xs -> fromMaybe xs (modifyAt idx f xs))
+                childSink (EventStep f) = sink (EventStep \xs -> fromMaybe xs (modifyAt idx f xs))
             { ui, unsubscribe } <- unSDOM sd track childSink
             _ <- appendChild (Element.toNode ui) (Element.toNode e)
             _ <- Ref.modify (unsubscribe : _) unsubscribers
@@ -512,12 +537,12 @@ attach root model v = do
     Ref.write new modelRef
     updates.push { old, new }
   let track = { ask: Ref.read modelRef, updates: updates.event }
-  let sink :: Sink (GuiEvent.GuiEvent Element Void model model)
-      sink (GuiEvent.EventEmit channel) = absurd channel
-      sink (GuiEvent.EventStep fn) = do
+  let sink :: Sink (GuiEvent Element Void model model)
+      sink (EventEmit channel) = absurd channel
+      sink (EventStep fn) = do
         traceM fn
         push fn
-      sink (GuiEvent.EventRef el) = pure unit
+      sink (EventRef el) = pure unit
   { ui, unsubscribe } <- unSDOM v track sink
   _ <- appendChild (Element.toNode ui) (Element.toNode root)
   pure

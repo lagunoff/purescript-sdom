@@ -10,12 +10,11 @@ import Data.Profunctor (dimap)
 import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import Effect.Exception (throw)
-import SDOM (ArrayChannel(..), Gui, SDOM, attach, array, text, text_)
+import SDOM (ArrayChannel(..), Gui, GuiEvent(..), SDOM, attach, array, text, text_)
 import SDOM.Components (textbox, checkbox)
 import SDOM.Elements as E
 import SDOM.Events as Events
 import SDOM.Attributes as A
-import SDOM.GuiEvent as GuiEvent
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.HTML (window)
 import Web.DOM (Element)
@@ -46,7 +45,7 @@ task = E.span_
       (_ { completed = _ })
   , prop (SProxy :: SProxy "description") textbox
   , E.button
-      [ Events.click \{ id } _ -> GuiEvent.EventEmit (Here (filter (_.id >>> (_ /= id))))]
+      [ Events.click \{ id } _ -> EventEmit (Here (filter (_.id >>> (_ /= id))))]
       [ text_ "✕" ]
   ]
 
@@ -62,7 +61,7 @@ taskList = dimap _.tasks { tasks: _ } $
     E.div_
       [ E.h1_ [ text_ "Task List" ]
       , E.button
-          [ Events.click \_ _ -> GuiEvent.EventStep \xs -> xs <> [emptyTask { id = length xs }] ]
+          [ Events.click \_ _ -> EventStep \xs -> xs <> [emptyTask { id = length xs }] ]
           [ text_ "＋ New Task" ]
       , array "ol" (E.li_ [ task ])
       , E.p_ [ text summaryLabel ]

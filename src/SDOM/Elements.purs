@@ -2,12 +2,11 @@ module SDOM.Elements where
 
 import SDOM
 import Data.Either (Either)
-import SDOM.GuiEvent as GuiEvent
 import Web.DOM (Element, Node)
 
 a
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 a = element "a"
@@ -20,7 +19,7 @@ a_ = element_ "a"
 
 abbr
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 abbr = element "abbr"
@@ -33,7 +32,7 @@ abbr_ = element_ "abbr"
 
 acronym
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 acronym = element "acronym"
@@ -46,7 +45,7 @@ acronym_ = element_ "acronym"
 
 address
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 address = element "address"
@@ -59,7 +58,7 @@ address_ = element_ "address"
 
 applet
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 applet = element "applet"
@@ -72,7 +71,7 @@ applet_ = element_ "applet"
 
 area
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 area = element "area"
@@ -85,7 +84,7 @@ area_ = element_ "area"
 
 article
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 article = element "article"
@@ -98,7 +97,7 @@ article_ = element_ "article"
 
 aside
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 aside = element "aside"
@@ -111,7 +110,7 @@ aside_ = element_ "aside"
 
 audio
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 audio = element "audio"
@@ -124,7 +123,7 @@ audio_ = element_ "audio"
 
 b
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 b = element "b"
@@ -137,7 +136,7 @@ b_ = element_ "b"
 
 base
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 base = element "base"
@@ -150,7 +149,7 @@ base_ = element_ "base"
 
 basefont
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 basefont = element "basefont"
@@ -163,7 +162,7 @@ basefont_ = element_ "basefont"
 
 bdi
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 bdi = element "bdi"
@@ -176,7 +175,7 @@ bdi_ = element_ "bdi"
 
 bdo
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 bdo = element "bdo"
@@ -189,7 +188,7 @@ bdo_ = element_ "bdo"
 
 big
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 big = element "big"
@@ -202,7 +201,7 @@ big_ = element_ "big"
 
 blockquote
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 blockquote = element "blockquote"
@@ -215,7 +214,7 @@ blockquote_ = element_ "blockquote"
 
 body
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 body = element "body"
@@ -228,7 +227,7 @@ body_ = element_ "body"
 
 br
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 br = element "br"
@@ -241,7 +240,7 @@ br_ = element_ "br"
 
 button
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 button = element "button"
@@ -254,7 +253,7 @@ button_ = element_ "button"
 
 canvas
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 canvas = element "canvas"
@@ -267,7 +266,7 @@ canvas_ = element_ "canvas"
 
 caption
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 caption = element "caption"
@@ -280,7 +279,7 @@ caption_ = element_ "caption"
 
 center
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 center = element "center"
@@ -293,7 +292,7 @@ center_ = element_ "center"
 
 cite
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 cite = element "cite"
@@ -306,7 +305,7 @@ cite_ = element_ "cite"
 
 code
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 code = element "code"
@@ -319,7 +318,7 @@ code_ = element_ "code"
 
 col
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 col = element "col"
@@ -332,7 +331,7 @@ col_ = element_ "col"
 
 colgroup
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 colgroup = element "colgroup"
@@ -345,7 +344,7 @@ colgroup_ = element_ "colgroup"
 
 datalist
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 datalist = element "datalist"
@@ -358,7 +357,7 @@ datalist_ = element_ "datalist"
 
 dd
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 dd = element "dd"
@@ -371,7 +370,7 @@ dd_ = element_ "dd"
 
 del
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 del = element "del"
@@ -384,7 +383,7 @@ del_ = element_ "del"
 
 details
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 details = element "details"
@@ -397,7 +396,7 @@ details_ = element_ "details"
 
 dfn
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 dfn = element "dfn"
@@ -410,7 +409,7 @@ dfn_ = element_ "dfn"
 
 dialog
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 dialog = element "dialog"
@@ -423,7 +422,7 @@ dialog_ = element_ "dialog"
 
 dir
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 dir = element "dir"
@@ -436,7 +435,7 @@ dir_ = element_ "dir"
 
 div
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 div = element "div"
@@ -449,7 +448,7 @@ div_ = element_ "div"
 
 dl
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 dl = element "dl"
@@ -462,7 +461,7 @@ dl_ = element_ "dl"
 
 dt
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 dt = element "dt"
@@ -475,7 +474,7 @@ dt_ = element_ "dt"
 
 em
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 em = element "em"
@@ -488,7 +487,7 @@ em_ = element_ "em"
 
 embed
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 embed = element "embed"
@@ -501,7 +500,7 @@ embed_ = element_ "embed"
 
 fieldset
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 fieldset = element "fieldset"
@@ -514,7 +513,7 @@ fieldset_ = element_ "fieldset"
 
 figcaption
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 figcaption = element "figcaption"
@@ -527,7 +526,7 @@ figcaption_ = element_ "figcaption"
 
 figure
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 figure = element "figure"
@@ -540,7 +539,7 @@ figure_ = element_ "figure"
 
 font
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 font = element "font"
@@ -553,7 +552,7 @@ font_ = element_ "font"
 
 footer
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 footer = element "footer"
@@ -566,7 +565,7 @@ footer_ = element_ "footer"
 
 form
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 form = element "form"
@@ -579,7 +578,7 @@ form_ = element_ "form"
 
 frame
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 frame = element "frame"
@@ -592,7 +591,7 @@ frame_ = element_ "frame"
 
 frameset
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 frameset = element "frameset"
@@ -605,7 +604,7 @@ frameset_ = element_ "frameset"
 
 h1
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 h1 = element "h1"
@@ -618,7 +617,7 @@ h1_ = element_ "h1"
 
 head
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 head = element "head"
@@ -631,7 +630,7 @@ head_ = element_ "head"
 
 header
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 header = element "header"
@@ -644,7 +643,7 @@ header_ = element_ "header"
 
 hr
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 hr = element "hr"
@@ -657,7 +656,7 @@ hr_ = element_ "hr"
 
 html
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 html = element "html"
@@ -670,7 +669,7 @@ html_ = element_ "htmch"
 
 i
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 i = element "i"
@@ -683,7 +682,7 @@ i_ = element_ "i"
 
 iframe
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 iframe = element "iframe"
@@ -696,7 +695,7 @@ iframe_ = element_ "iframe"
 
 img
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 img = element "img"
@@ -709,7 +708,7 @@ img_ = element_ "img"
 
 input
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 input = element "input"
@@ -722,7 +721,7 @@ input_ = element_ "input"
 
 ins
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 ins = element "ins"
@@ -735,7 +734,7 @@ ins_ = element_ "ins"
 
 kbd
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 kbd = element "kbd"
@@ -748,7 +747,7 @@ kbd_ = element_ "kbd"
 
 label
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 label = element "label"
@@ -761,7 +760,7 @@ label_ = element_ "label"
 
 legend
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 legend = element "legend"
@@ -774,7 +773,7 @@ legend_ = element_ "legend"
 
 li
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 li = element "li"
@@ -787,7 +786,7 @@ li_ = element_ "li"
 
 link
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 link = element "link"
@@ -800,7 +799,7 @@ link_ = element_ "link"
 
 main
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 main = element "main"
@@ -813,7 +812,7 @@ main_ = element_ "main"
 
 map
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 map = element "map"
@@ -826,7 +825,7 @@ map_ = element_ "map"
 
 mark
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 mark = element "mark"
@@ -839,7 +838,7 @@ mark_ = element_ "mark"
 
 menu
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 menu = element "menu"
@@ -852,7 +851,7 @@ menu_ = element_ "menu"
 
 menuitem
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 menuitem = element "menuitem"
@@ -865,7 +864,7 @@ menuitem_ = element_ "menuitem"
 
 meta
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 meta = element "meta"
@@ -878,7 +877,7 @@ meta_ = element_ "meta"
 
 meter
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 meter = element "meter"
@@ -891,7 +890,7 @@ meter_ = element_ "meter"
 
 nav
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 nav = element "nav"
@@ -904,7 +903,7 @@ nav_ = element_ "nav"
 
 noframes
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 noframes = element "noframes"
@@ -917,7 +916,7 @@ noframes_ = element_ "noframes"
 
 noscript
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 noscript = element "noscript"
@@ -930,7 +929,7 @@ noscript_ = element_ "noscript"
 
 object
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 object = element "object"
@@ -943,7 +942,7 @@ object_ = element_ "object"
 
 ol
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 ol = element "ol"
@@ -956,7 +955,7 @@ ol_ = element_ "ol"
 
 optgroup
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 optgroup = element "optgroup"
@@ -969,7 +968,7 @@ optgroup_ = element_ "optgroup"
 
 option
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 option = element "option"
@@ -982,7 +981,7 @@ option_ = element_ "option"
 
 output
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 output = element "output"
@@ -995,7 +994,7 @@ output_ = element_ "outpuch"
 
 p
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 p = element "p"
@@ -1008,7 +1007,7 @@ p_ = element_ "p"
 
 param
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 param = element "param"
@@ -1021,7 +1020,7 @@ param_ = element_ "param"
 
 picture
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 picture = element "picture"
@@ -1034,7 +1033,7 @@ picture_ = element_ "picture"
 
 pre
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 pre = element "pre"
@@ -1047,7 +1046,7 @@ pre_ = element_ "pre"
 
 progress
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 progress = element "progress"
@@ -1060,7 +1059,7 @@ progress_ = element_ "progresch"
 
 q
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 q = element "q"
@@ -1073,7 +1072,7 @@ q_ = element_ "q"
 
 rp
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 rp = element "rp"
@@ -1086,7 +1085,7 @@ rp_ = element_ "rp"
 
 rt
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 rt = element "rt"
@@ -1099,7 +1098,7 @@ rt_ = element_ "rt"
 
 ruby
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 ruby = element "ruby"
@@ -1112,7 +1111,7 @@ ruby_ = element_ "rubch"
 
 s
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 s = element "s"
@@ -1125,7 +1124,7 @@ s_ = element_ "s"
 
 samp
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 samp = element "samp"
@@ -1138,7 +1137,7 @@ samp_ = element_ "samp"
 
 script
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 script = element "script"
@@ -1151,7 +1150,7 @@ script_ = element_ "script"
 
 section
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 section = element "section"
@@ -1164,7 +1163,7 @@ section_ = element_ "section"
 
 select
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 select = element "select"
@@ -1177,7 +1176,7 @@ select_ = element_ "select"
 
 small
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 small = element "small"
@@ -1190,7 +1189,7 @@ small_ = element_ "small"
 
 source
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 source = element "source"
@@ -1203,7 +1202,7 @@ source_ = element_ "source"
 
 span
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 span = element "span"
@@ -1216,7 +1215,7 @@ span_ = element_ "span"
 
 strike
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 strike = element "strike"
@@ -1229,7 +1228,7 @@ strike_ = element_ "strike"
 
 strong
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 strong = element "strong"
@@ -1242,7 +1241,7 @@ strong_ = element_ "strong"
 
 style
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 style = element "style"
@@ -1255,7 +1254,7 @@ style_ = element_ "style"
 
 sub
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 sub = element "sub"
@@ -1268,7 +1267,7 @@ sub_ = element_ "sub"
 
 summary
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 summary = element "summary"
@@ -1281,7 +1280,7 @@ summary_ = element_ "summary"
 
 sup
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 sup = element "sup"
@@ -1294,7 +1293,7 @@ sup_ = element_ "sup"
 
 table
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 table = element "table"
@@ -1307,7 +1306,7 @@ table_ = element_ "table"
 
 tbody
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 tbody = element "tbody"
@@ -1320,7 +1319,7 @@ tbody_ = element_ "tbody"
 
 td
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 td = element "td"
@@ -1333,7 +1332,7 @@ td_ = element_ "td"
 
 template
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 template = element "template"
@@ -1346,7 +1345,7 @@ template_ = element_ "template"
 
 textarea
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 textarea = element "textarea"
@@ -1359,7 +1358,7 @@ textarea_ = element_ "textarea"
 
 tfoot
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 tfoot = element "tfoot"
@@ -1372,7 +1371,7 @@ tfoot_ = element_ "tfoot"
 
 th
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 th = element "th"
@@ -1385,7 +1384,7 @@ th_ = element_ "th"
 
 thead
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 thead = element "thead"
@@ -1398,7 +1397,7 @@ thead_ = element_ "thead"
 
 time
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 time = element "time"
@@ -1411,7 +1410,7 @@ time_ = element_ "time"
 
 title
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 title = element "title"
@@ -1424,7 +1423,7 @@ title_ = element_ "title"
 
 tr
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 tr = element "tr"
@@ -1437,7 +1436,7 @@ tr_ = element_ "tr"
 
 track
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 track = element "track"
@@ -1450,7 +1449,7 @@ track_ = element_ "track"
 
 tt
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 tt = element "tt"
@@ -1463,7 +1462,7 @@ tt_ = element_ "tch"
 
 u
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 u = element "u"
@@ -1476,7 +1475,7 @@ u_ = element_ "u"
 
 ul
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 ul = element "ul"
@@ -1489,7 +1488,7 @@ ul_ = element_ "ul"
 
 var
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 var = element "var"
@@ -1502,7 +1501,7 @@ var_ = element_ "var"
 
 video
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 video = element "video"
@@ -1515,7 +1514,7 @@ video_ = element_ "video"
 
 wbr
   :: forall channel i o
-   . Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+   . Array (Attr i (GuiEvent Element channel i o))
   -> Array (Gui Element channel i o)
   -> Gui Element channel i o
 wbr = element "wbr"
