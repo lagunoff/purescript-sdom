@@ -1,10 +1,10 @@
 module SDOM
   ( SDOM
+  , Gui
   , text
   , text_
   , Attr
   , unsafeAttr
-  , Handler
   , handler
   , element
   , element_
@@ -13,19 +13,20 @@ module SDOM
   , attach
   , unsafeSDOM
   , mapChannel
-  , interpretChannel
-  , withAsync
+--  , withAsync
   , unSDOM
   ) where
 
+import Data.TraversableWithIndex
 import Prelude
 
 import Control.Alternative (empty, (<|>))
 import Control.Lazy (class Lazy)
 import Control.Monad.Rec.Class (Step(..), tailRecM)
-import Data.Array (length, modifyAt, unsafeIndex, (!!), (..))
-import Data.Bifunctor (lmap)
+import Data.Array (length, modifyAt, unsafeIndex, updateAtIndices, (!!), (..))
+import Data.Bifunctor (lmap, rmap)
 import Data.Either (Either(..), either)
+import Data.Filterable (class Filterable, filterMap)
 import Data.Filterable (filterMap, partitionMap)
 import Data.Foldable (for_, oneOfMap, sequence_, traverse_)
 import Data.List (List(..), drop, take, (:))
@@ -35,15 +36,20 @@ import Data.Profunctor (class Profunctor, dimap)
 import Data.Profunctor.Strong (class Strong, first, second)
 import Data.Traversable (traverse)
 import Data.Tuple (fst, snd)
+import Debug.Trace (spy, trace, traceM)
 import Effect (Effect)
 import Effect.Ref as Ref
-import FRP.Event (Event, create, keepLatest, subscribe)
+import FRP.Event (Event, create, keepLatest, makeEvent, subscribe)
 import Partial.Unsafe (unsafePartial)
-import Web.DOM (Node, Element)
-import Web.DOM.Document (createDocumentFragment, createElement, createTextNode)
-import Web.DOM.Node (appendChild, lastChild, removeChild, setTextContent)
-import Web.DOM.Element as Element
+import SDOM.GuiEvent (GuiEvent)
+import SDOM.GuiEvent as GuiEvent
+import Unsafe.Coerce (unsafeCoerce)
+import Web.DOM (Element, Node, NodeList)
+import Web.DOM.Document (createDocumentFragment, createElement, createTextNode, fromNode)
 import Web.DOM.DocumentFragment as DocumentFragment
+import Web.DOM.Element as Element
+import Web.DOM.Node (appendChild, childNodes, lastChild, removeChild, replaceChild, setTextContent)
+import Web.DOM.NodeList as NodeList
 import Web.DOM.Text as Text
 import Web.Event.Event as Event
 import Web.Event.EventTarget (addEventListener, eventListener, removeEventListener)
@@ -95,14 +101,21 @@ import Web.HTML.Window (document)
 -- |     (Tuple String b)
 -- |     (Tuple a b)
 -- | ```
-newtype SDOM channel i o = SDOM
-  (Node
-  -> Effect i
-  -> Event { old :: i, new :: i }
-  -> Effect
-       { events :: Event (Either channel (i -> o))
-       , unsubscribe :: Effect Unit
-       })
+newtype Gui ui channel i o = Gui
+   ( Observable i
+  -> Sink (GuiEvent ui channel i o)
+  -> Effect { ui :: ui, unsubscribe :: Effect Unit })
+
+type Sink msg = msg -> Effect Unit
+
+type Observable a = { ask :: Effect a, updates :: Event { old :: a, new :: a } }
+
+mapObservable :: forall a b. (a -> b) -> Observable a -> Observable b
+mapObservable f o = { ask, updates } where
+  ask = map f o.ask
+  updates = map (\{ old, new } -> { old: f old, new: f new }) o.updates
+
+type SDOM channel i o = Gui Node
 
 -- | This function is provided in order to wrap existing Javascript components.
 -- |
@@ -118,39 +131,21 @@ newtype SDOM channel i o = SDOM
 -- | - Return an `unsubscribe` function to clean up any event handlers when the
 -- |   component is removed.
 unsafeSDOM
-  :: forall channel i o
-   . (Node
-     -> Effect i
-     -> Event { old :: i, new :: i }
-     -> Effect
-          { events :: Event (Either channel (i -> o))
-          , unsubscribe :: Effect Unit
-          }
-     )
-  -> SDOM channel i o
-unsafeSDOM = SDOM
-
--- | Interpret the event channel of a component.
-interpretChannel
-  :: forall channel channel' i o
-   . (Event channel -> Event (Either channel' (i -> o)))
-  -> SDOM channel i o
-  -> SDOM channel' i o
-interpretChannel f (SDOM sd) =
-    SDOM \n a e ->
-      overEvents f' <$> sd n a e
-  where
-    f' = partitionMap identity >>> \{ left, right } -> f left <|> Right <$> right
+  :: forall ui channel i o
+   . ( Observable i
+  -> Sink (GuiEvent ui channel i o)
+  -> Effect { ui :: ui, unsubscribe :: Effect Unit })
+  -> Gui ui channel i o
+unsafeSDOM = Gui
 
 -- | Change the event channel type of a component.
 mapChannel
-  :: forall channel channel' i o
+  :: forall ui channel channel' i o
    . (channel -> channel')
-  -> SDOM channel i o
-  -> SDOM channel' i o
-mapChannel f (SDOM sd) =
-  SDOM \n a e ->
-    overEvents (map (lmap f)) <$> sd n a e
+  -> Gui ui channel i o
+  -> Gui ui channel' i o
+mapChannel f (Gui create) =
+  Gui \model sink -> create model (sink <<< GuiEvent.mapChannel f)
 
 -- | A convenience function which provides the ability to use `Event`s
 -- | directly in a component's event channel.
@@ -173,47 +168,36 @@ mapChannel f (SDOM sd) =
 -- | > :type withAsync (E.button [] [Events.click handler] [ text \_ _ -> "Start" ])
 -- | forall channel context model. SDOM Unit channel context model
 -- | ```
-withAsync
-  :: forall channel i o
-   . SDOM (Event (Either channel (i -> o))) i o
-  -> SDOM channel i o
-withAsync = interpretChannel keepLatest
+-- withAsync
+--   :: forall ui channel i o
+--    . Gui ui (Event (GuiEvent ui channel i o)) i o
+--   -> Gui ui channel i o
+-- withAsync = ?withAsync keepLatest
 
-instance functorSDOM :: Functor (SDOM channel i) where
-  map f (SDOM sd) = SDOM \n a e ->
-    overEvents (map (map (map f))) <$> sd n a e
+instance functorSDOM :: Functor (Gui ui channel i) where
+  map f (Gui create) =
+    Gui \model sink -> create model (sink <<< GuiEvent.mapFn (_ >>> f))
 
-instance profunctorSDOM :: Profunctor (SDOM channel) where
-  dimap f g (SDOM sd) = SDOM \n a e ->
-    overEvents (map (map (dimap f g))) <$> sd n (f <$> a) (map (\{ old, new } -> { old: f old, new: f new }) e)
+instance profunctorGui :: Profunctor (Gui ui channel) where
+  dimap f g (Gui create) =
+    Gui \model sink -> create (mapObservable f model) (sink <<< GuiEvent.mapFn (\fn -> g <<< fn <<< f))
 
-instance strongSDOM :: Strong (SDOM channel) where
-  first (SDOM sd) = SDOM \n ask e ->
-    overEvents (map (map first)) <$> sd n (fst <$> ask) (map (\{ old, new } -> { old: fst old, new: fst new }) e)
-  second (SDOM sd) = SDOM \n ask e ->
-    overEvents (map (map second)) <$> sd n (snd <$> ask) (map (\{ old, new } -> { old: snd old, new: snd new }) e)
+instance strongSDOM :: Strong (Gui ui channel) where
+  first (Gui create) =
+    Gui \model sink -> create (mapObservable fst model) (sink <<< GuiEvent.mapFn (first))
+  second (Gui create) =
+    Gui \model sink -> create (mapObservable snd model) (sink <<< GuiEvent.mapFn (second))
 
-instance lazySDOM :: Lazy (SDOM channel i o) where
-  defer f = SDOM \n -> unSDOM (f unit) n
-
-overEvents
-  :: forall a b r
-   . (a -> b)
-  -> { events :: a | r }
-  -> { events :: b | r }
-overEvents f o = o { events = f o.events }
+instance lazyGui :: Lazy (Gui ui channel i o) where
+  defer f = Gui \model -> unSDOM (f unit) model
 
 unSDOM
-  :: forall channel i o
-   . SDOM channel i o
-  -> Node
-  -> Effect i
-  -> Event { old :: i, new :: i }
-  -> Effect
-       { events :: Event (Either channel (i -> o))
-       , unsubscribe :: Effect Unit
-       }
-unSDOM (SDOM f) = f
+  :: forall ui channel i o
+   . Gui ui channel i o
+  -> Observable i
+  -> Sink (GuiEvent ui channel i o)
+  -> Effect { ui :: ui, unsubscribe :: Effect Unit }
+unSDOM (Gui create) = create
 
 -- | Create a component which renders a text node based on some part of the
 -- | input model.
@@ -232,26 +216,27 @@ unSDOM (SDOM f) = f
 -- |     }
 -- |     a
 -- | ```
-text :: forall channel i o. (i -> String) -> SDOM channel i o
-text f = SDOM \n ask e -> do
+text :: forall channel i o. (i -> String) -> Gui Element channel i o
+text f = Gui \{ ask, updates } _ -> do
   doc <- window >>= document
   model <- ask
   tn <- createTextNode (f model) (HTMLDocument.toDocument doc)
-  _ <- appendChild (Text.toNode tn) n
-  unsubscribe <- e `subscribe` \{ old, new } -> do
+  unsubscribe <- updates `subscribe` \{ old, new } -> do
     let oldValue = f old
         newValue = f new
     when (oldValue /= newValue) $
       setTextContent newValue (Text.toNode tn)
-  pure { unsubscribe, events: empty }
+  let ui = unsafeCoerce tn
+  pure { ui, unsubscribe }
 
 -- | Create a component which renders a (static) text node.
-text_ :: forall channel i o. String -> SDOM channel i o
-text_ str = SDOM \n ask e -> do
+text_ :: forall channel i o. String -> Gui Element channel i o
+text_ content = Gui \{ ask, updates } _ -> do
   doc <- window >>= document
-  tn <- createTextNode str (HTMLDocument.toDocument doc)
-  _ <- appendChild (Text.toNode tn) n
-  pure { unsubscribe: pure unit, events: empty }
+  tn <- createTextNode content (HTMLDocument.toDocument doc)
+  let ui = unsafeCoerce tn
+      unsubscribe = pure unit
+  pure { ui, unsubscribe }
 
 -- | An attribute which can be associated with an `element`.
 -- |
@@ -272,12 +257,9 @@ text_ str = SDOM \n ask e -> do
 -- |     | r
 -- |     }
 -- | ```
-newtype Attr model = Attr
-   ( Element
-  -> { init :: model -> Effect Unit
-     , update :: { old :: model, new :: model } -> Effect Unit
-     }
-   )
+data Attr model msg
+  = Attr (Observable model -> Element -> Effect (Effect Unit))
+  | Handler (Effect model -> Sink msg -> Element -> Effect (Effect Unit))
 
 -- | Create an attribute unsafely, by providing functions which initialize
 -- | and update the attribute.
@@ -285,42 +267,10 @@ newtype Attr model = Attr
 -- | _Note_: most applications should not require this function. Consider using
 -- | the functions in the `SDOM.Attributes` module instead.
 unsafeAttr
-  :: forall model
-   . ( Element
-    -> { init :: model -> Effect Unit
-       , update :: { old :: model
-                   , new :: model
-                   }
-                -> Effect Unit
-       }
-     )
-  -> Attr model
+  :: forall model msg
+   . (Observable model -> Element -> Effect (Effect Unit))
+  -> Attr model msg
 unsafeAttr = Attr
-
--- | An event handler which can be associated with an `element`.
--- |
--- | The `context` type argument corresponds to the context type of the resulting
--- | component. The `e` type argument represents the type of event which will be
--- | handled. This might take into account the _event channel_ of the component.
--- |
--- | Event handlers can be constructed using the functions in the `SDOM.Events`
--- | module, or by using the `handler` function.
--- |
--- | For example:
--- |
--- | ```
--- | > import SDOM.Events as Events
--- | > :type Events.click \_ _ -> unit
--- | forall context. Handler context Unit
--- | ```
-newtype Handler i e = Handler
-  (i
-  -> Element
-  -> Effect
-       { events :: Event e
-       , unsubscribe :: Effect Unit
-       }
-  )
 
 -- | Create a `Handler` for specific events.
 -- |
@@ -332,17 +282,13 @@ handler
   :: forall i e
    . String
   -> (i -> Event.Event -> e)
-  -> Handler i e
-handler evtName f = Handler \i e -> do
-  { event, push } <- create
-  listener <- eventListener (push <<< f i)
-  let target = Element.toEventTarget e
+  -> Attr i e
+handler evtName f = Handler \ask sink el -> do
+  listener <- eventListener \ev -> ask >>= \model -> sink (f model ev)
+  let target = Element.toEventTarget el
       unsubscribe = removeEventListener (wrap evtName) listener false target
   addEventListener (wrap evtName) listener false target
-  pure
-    { events: event
-    , unsubscribe
-    }
+  pure unsubscribe
 
 -- | Create a component which renders an element, including attributes, event
 -- | handlers and a (static) list of child components.
@@ -401,39 +347,32 @@ handler evtName f = Handler \i e -> do
 element
   :: forall channel i o
    . String
-  -> Array (Attr i)
-  -> Array (Handler i (Either channel (i -> o)))
-  -> Array (SDOM channel i o)
-  -> SDOM channel i o
-element el attrs handlers children = SDOM \n ask updates -> do
+  -> Array (Attr i (GuiEvent.GuiEvent Element channel i o))
+  -> Array (Gui Element channel i o)
+  -> Gui Element channel i o
+element el attrs children = Gui \o@{ ask, updates } sink -> do
   doc <- window >>= document
   model <- ask
   e <- createElement el (HTMLDocument.toDocument doc)
-  _ <- appendChild (Element.toNode e) n
-  let setAttr :: Attr i -> Effect (Effect Unit)
-      setAttr (Attr attr) = do
-        let { init, update } = attr e
-        init model
-        updates `subscribe` update
-
-      setHandler
-        :: Handler i (Either channel (i -> o))
-        -> Effect
-             { events :: Event (Either channel (i -> o))
-             , unsubscribe :: Effect Unit
-             }
-      setHandler (Handler h) = ask >>= \i -> h i e
+  let setAttr :: Attr i (GuiEvent.GuiEvent Element channel i o) -> Effect (Effect Unit)
+      setAttr (Attr setup) = setup o e
+      setAttr (Handler setup) = setup ask sink e
   unsubscribers <- traverse setAttr attrs
-  evts <- traverse setHandler handlers
-  childrenEvts <- traverse (\child -> unSDOM child (Element.toNode e) ask updates) children
+  childrenEvts <- flip traverseWithIndex children \idx child -> do
+    let childSink :: Sink (GuiEvent.GuiEvent Element channel i o)
+        childSink (GuiEvent.EventChan channel) = sink (GuiEvent.EventChan channel)
+        childSink (GuiEvent.EventFn fn) = sink (GuiEvent.EventFn fn)
+        childSink (GuiEvent.EventGui el) = childNodes (Element.toNode e) >>= NodeList.item idx >>= case _ of
+          Just oldEl -> void $ replaceChild (Element.toNode el) oldEl (Element.toNode e)
+          Nothing -> pure unit
+    { ui, unsubscribe } <- unSDOM child o childSink
+    _ <- appendChild (Element.toNode ui) (Element.toNode e)
+    pure unsubscribe
   pure
-    { events:
-        oneOfMap _.events evts
-        <|> oneOfMap _.events childrenEvts
+    { ui: e
     , unsubscribe:
         sequence_ unsubscribers
-          *> traverse_ _.unsubscribe evts
-          *> traverse_ _.unsubscribe childrenEvts
+          *> traverse_ identity childrenEvts
     }
 
 -- | Create a component which renders an element with a (static) array of child
@@ -453,9 +392,9 @@ element el attrs handlers children = SDOM \n ask updates -> do
 element_
   :: forall channel i o
    . String
-  -> Array (SDOM channel i o)
-  -> SDOM channel i o
-element_ el = element el [] []
+  -> Array (Gui Element channel i o)
+  -> Gui Element channel i o
+element_ el = element el []
 
 removeLastNChildren :: Int -> Node -> Effect Unit
 removeLastNChildren m n = tailRecM loop m where
@@ -494,53 +433,43 @@ data ArrayChannel i channel
 array
   :: forall channel i
    . String
-  -> SDOM (ArrayChannel i channel) i i
-  -> SDOM channel (Array i) (Array i)
-array el sd = SDOM arrayImpl where
-  arrayImpl
-    :: Node
-    -> Effect (Array i)
-    -> Event { old :: Array i, new :: Array i }
-    -> Effect
-         { events :: Event (Either channel (Array i -> Array i))
-         , unsubscribe :: Effect Unit
-         }
-  arrayImpl n ask updates = do
-    doc <- window >>= document
-    models <- ask
-    e <- createElement el (HTMLDocument.toDocument doc)
-    _ <- appendChild (Element.toNode e) n
-    unsubscribers <- Ref.new Nil
-    let runUnsubscribers = Ref.read unsubscribers >>= sequence_
-    { event, push } <- create
-    let setup :: Array i -> Array i -> Effect Unit
-        setup old_ new_
-          | length new_ > length old_ = do
-            for_ (length old_ .. (length new_ - 1)) \idx -> do
-              fragment <- createDocumentFragment (HTMLDocument.toDocument doc)
-              let frag = DocumentFragment.toNode fragment
-                  here xs = unsafePartial (xs `unsafeIndex` idx)
-              { events, unsubscribe } <- unSDOM sd frag (here <$> ask) (filterMap (\{ old, new } -> { old: _, new: _ } <$> (old !! idx) <*> (new !! idx)) updates)
-              unsubscribe1 <- events `subscribe` \ev ->
-                case ev of
-                  Left (Parent other) -> push (Left other)
-                  Left (Here fi) -> push (Right fi)
-                  Right f -> push (Right (\xs -> fromMaybe xs (modifyAt idx f xs)))
-              _ <- appendChild frag (Element.toNode e)
-              _ <- Ref.modify ((unsubscribe *> unsubscribe1) : _) unsubscribers
-              pure unit
-          | length new_ < length old_ = do
-            let d = length old_ - length new_
-            dropped <- Ref.modify' (\xs -> { state: drop d xs, value: take d xs }) unsubscribers
-            sequence_ dropped
-            removeLastNChildren d (Element.toNode e)
-          | otherwise = pure unit
-    setup [] models
-    unsubscribe <- updates `subscribe` \{ old, new } -> setup old new
-    pure
-      { events: event
-      , unsubscribe: unsubscribe *> runUnsubscribers
-      }
+  -> Gui Element (ArrayChannel i channel) i i
+  -> Gui Element channel (Array i) (Array i)
+array el sd = Gui \{ ask, updates } sink -> do
+  doc <- window >>= document
+  models <- ask
+  e <- createElement el (HTMLDocument.toDocument doc)
+  unsubscribers <- Ref.new Nil
+  let runUnsubscribers = Ref.read unsubscribers >>= sequence_
+  let setup :: Array i -> Array i -> Effect Unit
+      setup old_ new_
+        | length new_ > length old_ = do
+          for_ (length old_ .. (length new_ - 1)) \idx -> do
+            let here xs = unsafePartial (xs `unsafeIndex` idx)
+                o = { ask: ask >>= (here >>> pure), updates: chiildUpdates }
+                chiildUpdates = filterMap (\{ old, new } -> { old: _, new: _ } <$> (old !! idx) <*> (new !! idx)) updates
+                childSink (GuiEvent.EventChan (Parent other)) = sink (GuiEvent.EventChan other)
+                childSink (GuiEvent.EventChan (Here fi)) = sink (GuiEvent.EventFn fi)
+                childSink (GuiEvent.EventGui ui) = childNodes (Element.toNode e) >>= NodeList.item idx >>= case _ of
+                  Just oldEl -> void $ replaceChild (Element.toNode ui) oldEl (Element.toNode e)
+                  Nothing -> pure unit
+                childSink (GuiEvent.EventFn f) = sink (GuiEvent.EventFn \xs -> fromMaybe xs (modifyAt idx f xs))
+            { ui, unsubscribe } <- unSDOM sd o childSink
+            _ <- appendChild (Element.toNode ui) (Element.toNode e)
+            _ <- Ref.modify (unsubscribe : _) unsubscribers
+            pure unit
+        | length new_ < length old_ = do
+          let d = length old_ - length new_
+          dropped <- Ref.modify' (\xs -> { state: drop d xs, value: take d xs }) unsubscribers
+          sequence_ dropped
+          removeLastNChildren d (Element.toNode e)
+        | otherwise = pure unit
+  setup [] models
+  unsubscribe <- updates `subscribe` \{ old, new } -> setup old new
+  pure
+    { ui: e
+    , unsubscribe: unsubscribe *> runUnsubscribers
+    }
 
 -- | Attach a component to the DOM.
 -- |
@@ -561,7 +490,7 @@ attach
   :: forall model
    . Element
   -> model
-  -> SDOM Void model model
+  -> Gui Element Void model model
   -> Effect
        { push :: (model -> model) -> Effect Unit
        , detach :: Effect Unit
@@ -570,19 +499,23 @@ attach root model v = do
   modelRef <- Ref.new model
   document <- window >>= document
   { event, push } <- create
-  fragment <- createDocumentFragment (HTMLDocument.toDocument document)
-  let n = DocumentFragment.toNode fragment
-  { events, unsubscribe } <- unSDOM v n (Ref.read modelRef) event
-  let pushNewModel :: Either Void (model -> model) -> Effect Unit
-      pushNewModel e = do
-        oldModel <- Ref.read modelRef
-        let f = either absurd identity e
-            newModel = f oldModel
-        _ <- Ref.write newModel modelRef
-        push { old: oldModel, new: newModel }
-  unsubscribe1 <- events `subscribe` pushNewModel
-  _ <- appendChild n (Element.toNode root)
+  updates <- create
+  unsubscribe1 <- event `subscribe` \f -> do
+    old <- Ref.read modelRef
+    let new = f old
+    traceM new
+    Ref.write new modelRef
+    updates.push { old, new }
+  let o = { ask: Ref.read modelRef, updates: updates.event }
+  let sink :: Sink (GuiEvent.GuiEvent Element Void model model)
+      sink (GuiEvent.EventChan channel) = absurd channel
+      sink (GuiEvent.EventFn fn) = do
+        traceM fn
+        push fn
+      sink (GuiEvent.EventGui el) = pure unit
+  { ui, unsubscribe } <- unSDOM v o sink
+  _ <- appendChild (Element.toNode ui) (Element.toNode root)
   pure
-    { push: pushNewModel <<< Right
-    , detach: unsubscribe *> unsubscribe1
+    { push: push
+    , detach: unsubscribe
     }

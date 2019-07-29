@@ -13,71 +13,72 @@ import Prelude
 
 import SDOM (Attr, unsafeAttr)
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM.Element (removeAttribute, setAttribute)
+import FRP.Event (subscribe)
+import Web.DOM.Element (Element, removeAttribute, setAttribute)
+import Web.HTML.HTMLInputElement as HTMLInputElement
 import Web.HTML.HTMLInputElement (setChecked, setDisabled, setValue)
 
-attr :: forall model. String -> (model -> String) -> Attr model
+attr :: forall model msg. String -> (model -> String) -> Attr model msg
 attr attrName f =
-  unsafeAttr \e ->
-    { init: \model -> setAttribute attrName (f model) e
-    , update: \{ old, new } -> do
-        let oldValue = f old
-            newValue = f new
-        when (oldValue /= newValue) (setAttribute attrName newValue e)
-    }
+  unsafeAttr \{ ask, updates } e -> do
+    let update v = setAttribute attrName v e
+    unsubscribe <- updates `subscribe` \{ old, new } -> do
+      let oldValue = f old
+          newValue = f new
+      when (oldValue /= newValue) (update newValue)
+    ask >>= update <<< f
+    pure unsubscribe
 
-for :: forall model. (model -> String) -> Attr model
+for :: forall model msg. (model -> String) -> Attr model msg
 for = attr "for"
 
-id :: forall model. (model -> String) -> Attr model
+id :: forall model msg. (model -> String) -> Attr model msg
 id = attr "id"
 
-className :: forall model. (model -> String) -> Attr model
+className :: forall model msg. (model -> String) -> Attr model msg
 className = attr "class"
 
-name :: forall model. (model -> String) -> Attr model
+name :: forall model msg. (model -> String) -> Attr model msg
 name = attr "name"
 
-type_ :: forall model. (model -> String) -> Attr model
+type_ :: forall model msg. (model -> String) -> Attr model msg
 type_ = attr "type"
 
-value :: forall model. (model -> String) -> Attr model
+value :: forall model msg. (model -> String) -> Attr model msg
 value f =
-  unsafeAttr \e ->
+  unsafeAttr \{ ask, updates } tn -> do
     let update s = do
-          setValue s (unsafeCoerce e)
-          setAttribute "value" s e
-     in { init: \model -> update (f model)
-        , update: \{ old, new } -> do
-            let oldValue = f old
-                newValue = f new
-            when (oldValue /= newValue) (update newValue)
-        }
-
-checked :: forall model. (model -> Boolean) -> Attr model
+          setValue s (unsafeCoerce tn)
+          setAttribute "value" s tn
+    unsubscribe <- updates `subscribe` \{ old, new } -> do
+      let oldValue = f old
+          newValue = f new
+      when (oldValue /= newValue) (update newValue)
+    ask >>= update <<< f
+    pure unsubscribe
+   
+checked :: forall model msg. (model -> Boolean) -> Attr model msg
 checked f =
-  unsafeAttr \e ->
+  unsafeAttr \{ ask, updates } e -> do
     let update b = do
           setChecked b (unsafeCoerce e)
           if b then setAttribute "checked" "checked" e
                else removeAttribute "checked" e
-     in { init: \model -> update (f model)
-        , update: \{ old, new } -> do
-            let oldValue = f old
-                newValue = f new
-            when (oldValue /= newValue) (update newValue)
-        }
+    unsubscribe <- updates `subscribe` \{ old, new } -> do
+      update (f new)
+    ask >>= update <<< f
+    pure unsubscribe
 
-disabled :: forall model. (model -> Boolean) -> Attr model
+disabled :: forall model msg. (model -> Boolean) -> Attr model msg
 disabled f =
-  unsafeAttr \e ->
+  unsafeAttr \{ ask, updates } e -> do
     let update b = do
           setDisabled b (unsafeCoerce e)
           if b then setAttribute "disabled" "disabled" e
                else removeAttribute "disabled" e
-     in { init: \model -> update (f model)
-        , update: \{ old, new } -> do
-            let oldValue = f old
-                newValue = f new
-            when (oldValue /= newValue) (update newValue)
-        }
+    unsubscribe <- updates `subscribe` \{ old, new } -> do
+      let oldValue = f old
+          newValue = f new
+      when (oldValue /= newValue) (update newValue)
+    ask >>= update <<< f
+    pure unsubscribe

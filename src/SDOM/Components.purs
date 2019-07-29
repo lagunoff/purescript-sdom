@@ -2,20 +2,21 @@ module SDOM.Components where
 
 import Prelude
 
-import SDOM (SDOM, text_)
+import SDOM (Gui, text_)
 import SDOM.Attributes as A
 import SDOM.Elements as E
 import SDOM.Events as Events
+import SDOM.GuiEvent as GuiEvent
 import Unsafe.Coerce (unsafeCoerce)
+import Web.DOM (Element)
 
 -- | Render a textbox component whose model is a `String`.
 -- |
 -- | _Note_: the model type can easily be changed using a lens.
-textbox :: forall channel. SDOM channel String String
+textbox :: forall channel. Gui Element channel String String
 textbox =
   E.input
-    [ A.value \val -> val ]
-    [ Events.change \_ e -> pure \_ -> (unsafeCoerce e).target.value ]
+    [ A.value \val -> val, Events.change \_ e -> GuiEvent.EventFn \_ -> (unsafeCoerce e).target.value ]
     []
 
 -- | Render a checkbox and an accompanying `label` inside a `span`.
@@ -30,21 +31,19 @@ checkbox
    . (model -> String)
   -> (model -> Boolean)
   -> (model -> Boolean -> model)
-  -> SDOM channel model model
+  -> Gui Element channel model model
 checkbox name getChecked setChecked =
   E.span_
     [ E.input
         [ A.type_ \_ -> "checkbox"
         , A.checked \model -> getChecked model
         , A.id \model -> name model
-        ]
-        [ Events.change \_ e -> pure \model ->
-            setChecked model (unsafeCoerce e).target.checked
+        , Events.change \_ e -> GuiEvent.EventFn \model ->
+            setChecked model $ not $ getChecked model
         ]
         []
     , E.label
         [ A.for \model -> name model ]
-        []
         []
     ]
 
@@ -63,14 +62,13 @@ select
    . (option -> { key :: String, label :: String })
   -> (String -> option)
   -> Array option
-  -> SDOM channel option option
+  -> Gui Element channel option option
 select fromOption toOption options =
   E.select
-    [ A.value \value -> (fromOption value).key ]
-    [ Events.change \_ e -> pure \_ ->
-        toOption (unsafeCoerce e).target.value
+    [ A.value \value -> (fromOption value).key
+    , Events.change \_ e -> GuiEvent.EventFn \_ -> toOption (unsafeCoerce e).target.value
     ]
     (options <#> \option ->
       let { key, label } = fromOption option
-       in E.option [ A.value \_ -> key ] [] [ text_ label ]
+       in E.option [ A.value \_ -> key ] [ text_ label ]
     )
