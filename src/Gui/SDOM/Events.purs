@@ -1,6 +1,6 @@
-module SDOM.Events where
+module Gui.SDOM.Events where
 
-import SDOM
+import Gui.SDOM
 import Web.Event.Event as Event
 
 change

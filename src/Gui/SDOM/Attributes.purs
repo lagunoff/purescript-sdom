@@ -1,4 +1,4 @@
-module SDOM.Attributes
+module Gui.SDOM.Attributes
   ( for
   , id
   , name
@@ -11,11 +11,10 @@ module SDOM.Attributes
 
 import Prelude
 
-import SDOM (Attr, unsafeAttr)
+import Gui.SDOM (Attr, unsafeAttr)
 import Unsafe.Coerce (unsafeCoerce)
 import FRP.Event (subscribe)
-import Web.DOM.Element (Element, removeAttribute, setAttribute)
-import Web.HTML.HTMLInputElement as HTMLInputElement
+import Web.DOM.Element (removeAttribute, setAttribute)
 import Web.HTML.HTMLInputElement (setChecked, setDisabled, setValue)
 
 attr :: forall model msg. String -> (model -> String) -> Attr model msg

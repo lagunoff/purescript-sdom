@@ -1,15 +1,5 @@
-module SDOM
+module Gui.SDOM
   ( SDOM
-  , Sink
-  , Track
-  , mapTrack
-  , class ToNode
-  , toNode
-  , Gui
-  , GuiEvent(..)
-  , mapEmit
-  , mapRef
-  , mapStep
   , text
   , text_
   , Attr
@@ -20,40 +10,29 @@ module SDOM
   , ArrayChannel(..)
   , array
   , attach
-  , unsafeSDOM
-  , mapChannel
---  , withAsync
-  , unSDOM
+  , module Gui
   ) where
 
-import Data.TraversableWithIndex
 import Prelude
 
-import Control.Alternative (empty, (<|>))
-import Control.Lazy (class Lazy)
 import Control.Monad.Rec.Class (Step(..), tailRecM)
-import Data.Array (length, modifyAt, unsafeIndex, updateAtIndices, (!!), (..))
-import Data.Bifunctor (lmap, rmap)
-import Data.Either (Either(..), either)
-import Data.Filterable (class Filterable, filterMap)
-import Data.Filterable (filterMap, partitionMap)
-import Data.Foldable (for_, oneOfMap, sequence_, traverse_)
+import Data.Array (length, modifyAt, unsafeIndex, (!!), (..))
+import Data.Filterable (filterMap)
+import Data.Foldable (for_, sequence_, traverse_)
 import Data.List (List(..), drop, take, (:))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (wrap)
-import Data.Profunctor (class Profunctor, dimap)
-import Data.Profunctor.Strong (class Strong, first, second)
 import Data.Traversable (traverse)
-import Data.Tuple (fst, snd)
-import Debug.Trace (spy, trace, traceM)
+import Data.TraversableWithIndex (traverseWithIndex)
+import Debug.Trace (traceM)
 import Effect (Effect)
 import Effect.Ref as Ref
-import FRP.Event (Event, create, keepLatest, makeEvent, subscribe)
+import FRP.Event (create, subscribe)
+import Gui (Gui, GuiEvent(..), Sink, Track, mapRef, unGui, unsafeGui)
 import Partial.Unsafe (unsafePartial)
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM (Element, Node, NodeList, Text)
-import Web.DOM.Document (createDocumentFragment, createElement, createTextNode, fromNode)
-import Web.DOM.DocumentFragment as DocumentFragment
+import Web.DOM (Element, Node)
+import Web.DOM.Document (createElement, createTextNode)
 import Web.DOM.Element as Element
 import Web.DOM.Node (appendChild, childNodes, lastChild, removeChild, replaceChild, setTextContent)
 import Web.DOM.NodeList as NodeList
@@ -64,170 +43,8 @@ import Web.HTML (window)
 import Web.HTML.HTMLDocument as HTMLDocument
 import Web.HTML.Window (document)
 
--- | A value of type `SDOM channel context i o` represents a component in the
--- | "static DOM".
--- |
--- | Simple components can be created using the `text` and `element` functions.
--- | The `array` function can be used to create a component which renders a
--- | uniform array of subcomponents. The `SDOM.Components` module also contains
--- | some ready-to-use components.
--- |
--- | Here is an explanation of each type variable:
--- |
--- | - `i` is the type of the model (when used as an input).
--- |   Inputs of type `i` will be provided in order to initialize or rerender
--- |   the component.
--- | - `o` is the type of the model (when used as an output).
--- |   Events raised by the component may change the model by providing a function
--- |   of type `i -> o`. The model is split into input and output type arguments
--- |   to allow the profunctor instances for `SDOM` to exist, and to enable the
--- |   use of profunctor lenses for component composition.
--- | - `context` is the type of the "context" of the component. If the component
--- |   is rendered as a child of a dynamically-sized list, the context will include
--- |   its index in that list, for example. This type argument may not be needed
--- |   in simple components.
--- | - `channel` is the type of the "event channel" of the component. If the
--- |   component is rendered as a child of a dynamically-sized list, the channel
--- |   type will provide a way to pass an event to the owner of that list, so that
--- |   the component can modify the list itself, not just the element of the list
--- |   which generated it. For example, we might use the channel to allow a
--- |   component to remove itself from a list.
--- |
--- | Since `SDOM` is a _strong profunctor_, we can apply profunctor lenses to values
--- | of type `SDOM channel context i o` directly, to focus a component on a
--- | particular piece of the model:
--- |
--- | ```
--- | > :type text (const identity)
--- | forall channel context a. SDOM channel context String a
--- |
--- | > import Data.Lens
--- | > :type _1 (text (const identity))
--- | forall channel context a b.
--- |   SDOM channel context
--- |     (Tuple String b)
--- |     (Tuple a b)
--- | ```
-newtype Gui ui channel i o = Gui
-   ( Track i
-  -> Sink (GuiEvent ui channel i o)
-  -> Effect { ui :: ui, unsubscribe :: Effect Unit })
+type SDOM channel i o = Gui Node channel i o
 
-type Sink msg = msg -> Effect Unit
-
-type Track a = { ask :: Effect a, updates :: Event { old :: a, new :: a } }
-
-mapTrack :: forall a b. (a -> b) -> Track a -> Track b
-mapTrack f o = { ask, updates } where
-  ask = map f o.ask
-  updates = map (\{ old, new } -> { old: f old, new: f new }) o.updates
-
-data GuiEvent ui channel i o
-  = EventEmit channel
-  | EventRef ui
-  | EventStep (i -> o)
-
-mapEmit :: forall ui channel channel' i o. (channel -> channel') -> GuiEvent ui channel i o -> GuiEvent ui channel' i o
-mapEmit f (EventEmit channel) = EventEmit $ f channel
-mapEmit f (EventRef ui) = EventRef ui
-mapEmit f (EventStep fn) = EventStep fn
-
-mapRef :: forall ui ui' channel i o. (ui -> ui') -> GuiEvent ui channel i o -> GuiEvent ui' channel i o
-mapRef f (EventRef ui) = EventRef $ f ui
-mapRef f (EventEmit channel) = EventEmit channel
-mapRef f (EventStep fn) = EventStep fn
-
-mapStep :: forall ui channel i i' o o'. ((i -> o) -> (i' -> o')) -> GuiEvent ui channel i o -> GuiEvent ui channel i' o'
-mapStep f (EventStep fn) = EventStep $ f fn
-mapStep f (EventRef ui) = EventRef ui
-mapStep f (EventEmit channel) = EventEmit channel
-
-type SDOM channel i o = Gui Element channel i o
-
-class ToNode n where
-  toNode :: n -> Node
-
--- | This function is provided in order to wrap existing Javascript components.
--- |
--- | Most applications should not need to use this function directly. Instead,
--- | you can build components using the other, safe functions exposed by this
--- | module, or reuse components from the `SDOM.Components` module.
--- |
--- | This function accepts a function as its only argument. This function should:
--- |
--- | - Set up any DOM components and render the initial model,
--- | - Subscribe to model updates in order to update those components,
--- | - Return an `events` stream for user events generated by the component,
--- | - Return an `unsubscribe` function to clean up any event handlers when the
--- |   component is removed.
-unsafeSDOM
-  :: forall ui channel i o
-   . ( Track i
-  -> Sink (GuiEvent ui channel i o)
-  -> Effect { ui :: ui, unsubscribe :: Effect Unit })
-  -> Gui ui channel i o
-unsafeSDOM = Gui
-
--- | Change the event channel type of a component.
-mapChannel
-  :: forall ui channel channel' i o
-   . (channel -> channel')
-  -> Gui ui channel i o
-  -> Gui ui channel' i o
-mapChannel f (Gui create) =
-  Gui \model sink -> create model (sink <<< mapEmit f)
-
--- | A convenience function which provides the ability to use `Event`s
--- | directly in a component's event channel.
--- |
--- | `Event`s will be disposed of when the component unmounts, or when a new
--- | event takes its place.
--- |
--- | For example, clicking this button starts a timer which raises a `Unit`
--- | event every second.
--- |
--- | ```
--- | > :type text (const identity)
--- | forall channel context a. SDOM channel context String a
--- |
--- | > import SDOM.Elements as E
--- | > import SDOM.Events as Events
--- |
--- | > handler _ _ = Left (interval 1000 $> Left unit)
--- |
--- | > :type withAsync (E.button [] [Events.click handler] [ text \_ _ -> "Start" ])
--- | forall channel context model. SDOM Unit channel context model
--- | ```
--- withAsync
---   :: forall ui channel i o
---    . Gui ui (Event (GuiEvent ui channel i o)) i o
---   -> Gui ui channel i o
--- withAsync = ?withAsync keepLatest
-
-instance functorSDOM :: Functor (Gui ui channel i) where
-  map f (Gui create) =
-    Gui \model sink -> create model (sink <<< mapStep (_ >>> f))
-
-instance profunctorGui :: Profunctor (Gui ui channel) where
-  dimap f g (Gui create) =
-    Gui \model sink -> create (mapTrack f model) (sink <<< mapStep (\fn -> g <<< fn <<< f))
-
-instance strongSDOM :: Strong (Gui ui channel) where
-  first (Gui create) =
-    Gui \model sink -> create (mapTrack fst model) (sink <<< mapStep (first))
-  second (Gui create) =
-    Gui \model sink -> create (mapTrack snd model) (sink <<< mapStep (second))
-
-instance lazyGui :: Lazy (Gui ui channel i o) where
-  defer f = Gui \model -> unSDOM (f unit) model
-
-unSDOM
-  :: forall ui channel i o
-   . Gui ui channel i o
-  -> Track i
-  -> Sink (GuiEvent ui channel i o)
-  -> Effect { ui :: ui, unsubscribe :: Effect Unit }
-unSDOM (Gui create) = create
 
 -- | Create a component which renders a text node based on some part of the
 -- | input model.
@@ -246,8 +63,8 @@ unSDOM (Gui create) = create
 -- |     }
 -- |     a
 -- | ```
-text :: forall channel i o. (i -> String) -> Gui Element channel i o
-text f = Gui \{ ask, updates } _ -> do
+text :: forall channel i o. (i -> String) -> SDOM channel i o
+text f = unsafeGui \{ ask, updates } _ -> do
   doc <- window >>= document
   model <- ask
   tn <- createTextNode (f model) (HTMLDocument.toDocument doc)
@@ -260,8 +77,8 @@ text f = Gui \{ ask, updates } _ -> do
   pure { ui, unsubscribe }
 
 -- | Create a component which renders a (static) text node.
-text_ :: forall channel i o. String -> Gui Element channel i o
-text_ content = Gui \{ ask, updates } _ -> do
+text_ :: forall channel i o. String -> SDOM channel i o
+text_ content = unsafeGui \{ ask, updates } _ -> do
   doc <- window >>= document
   tn <- createTextNode content (HTMLDocument.toDocument doc)
   let ui = unsafeCoerce tn
@@ -378,28 +195,28 @@ element
   :: forall channel i o
    . String
   -> Array (Attr i (GuiEvent Element channel i o))
-  -> Array (Gui Element channel i o)
-  -> Gui Element channel i o
-element el attrs children = Gui \track@{ ask, updates } sink -> do
+  -> Array (SDOM channel i o)
+  -> SDOM channel i o
+element el attrs children = unsafeGui \track@{ ask, updates } sink -> do
   doc <- window >>= document
   model <- ask
   e <- createElement el (HTMLDocument.toDocument doc)
   let setAttr :: Attr i (GuiEvent Element channel i o) -> Effect (Effect Unit)
       setAttr (Attr setup) = setup track e
-      setAttr (Handler setup) = setup ask sink e
+      setAttr (Handler setup) = setup ask (sink <<< mapRef Element.toNode) e
   unsubscribers <- traverse setAttr attrs
   childrenEvts <- flip traverseWithIndex children \idx child -> do
-    let childSink :: Sink (GuiEvent Element channel i o)
+    let childSink :: Sink (GuiEvent Node channel i o)
         childSink (EventEmit channel) = sink (EventEmit channel)
         childSink (EventStep fn) = sink (EventStep fn)
         childSink (EventRef el) = childNodes (Element.toNode e) >>= NodeList.item idx >>= case _ of
-          Just oldEl -> void $ replaceChild (Element.toNode el) oldEl (Element.toNode e)
+          Just oldEl -> void $ replaceChild el oldEl (Element.toNode e)
           Nothing -> pure unit
-    { ui, unsubscribe } <- unSDOM child track childSink
-    _ <- appendChild (Element.toNode ui) (Element.toNode e)
+    { ui, unsubscribe } <- unGui child track childSink
+    _ <- appendChild ui (Element.toNode e)
     pure unsubscribe
   pure
-    { ui: e
+    { ui: Element.toNode e
     , unsubscribe:
         sequence_ unsubscribers
           *> traverse_ identity childrenEvts
@@ -422,8 +239,8 @@ element el attrs children = Gui \track@{ ask, updates } sink -> do
 element_
   :: forall channel i o
    . String
-  -> Array (Gui Element channel i o)
-  -> Gui Element channel i o
+  -> Array (SDOM channel i o)
+  -> SDOM channel i o
 element_ el = element el []
 
 removeLastNChildren :: Int -> Node -> Effect Unit
@@ -463,9 +280,9 @@ data ArrayChannel i channel
 array
   :: forall channel i
    . String
-  -> Gui Element (ArrayChannel i channel) i i
-  -> Gui Element channel (Array i) (Array i)
-array el sd = Gui \{ ask, updates } sink -> do
+  -> Gui Node (ArrayChannel i channel) i i
+  -> Gui Node channel (Array i) (Array i)
+array el sd = unsafeGui \{ ask, updates } sink -> do
   doc <- window >>= document
   models <- ask
   e <- createElement el (HTMLDocument.toDocument doc)
@@ -481,11 +298,11 @@ array el sd = Gui \{ ask, updates } sink -> do
                 childSink (EventEmit (Parent other)) = sink (EventEmit other)
                 childSink (EventEmit (Here fi)) = sink (EventStep fi)
                 childSink (EventRef ui) = childNodes (Element.toNode e) >>= NodeList.item idx >>= case _ of
-                  Just oldEl -> void $ replaceChild (Element.toNode ui) oldEl (Element.toNode e)
+                  Just oldEl -> void $ replaceChild ui oldEl (Element.toNode e)
                   Nothing -> pure unit
                 childSink (EventStep f) = sink (EventStep \xs -> fromMaybe xs (modifyAt idx f xs))
-            { ui, unsubscribe } <- unSDOM sd track childSink
-            _ <- appendChild (Element.toNode ui) (Element.toNode e)
+            { ui, unsubscribe } <- unGui sd track childSink
+            _ <- appendChild ui (Element.toNode e)
             _ <- Ref.modify (unsubscribe : _) unsubscribers
             pure unit
         | length new_ < length old_ = do
@@ -497,7 +314,7 @@ array el sd = Gui \{ ask, updates } sink -> do
   setup [] models
   unsubscribe <- updates `subscribe` \{ old, new } -> setup old new
   pure
-    { ui: e
+    { ui: Element.toNode e
     , unsubscribe: unsubscribe *> runUnsubscribers
     }
 
@@ -520,7 +337,7 @@ attach
   :: forall model
    . Element
   -> model
-  -> Gui Element Void model model
+  -> SDOM Void model model
   -> Effect
        { push :: (model -> model) -> Effect Unit
        , detach :: Effect Unit
@@ -537,14 +354,14 @@ attach root model v = do
     Ref.write new modelRef
     updates.push { old, new }
   let track = { ask: Ref.read modelRef, updates: updates.event }
-  let sink :: Sink (GuiEvent Element Void model model)
+  let sink :: Sink (GuiEvent Node Void model model)
       sink (EventEmit channel) = absurd channel
       sink (EventStep fn) = do
         traceM fn
         push fn
       sink (EventRef el) = pure unit
-  { ui, unsubscribe } <- unSDOM v track sink
-  _ <- appendChild (Element.toNode ui) (Element.toNode root)
+  { ui, unsubscribe } <- unGui v track sink
+  _ <- appendChild ui (Element.toNode root)
   pure
     { push: push
     , detach: unsubscribe *> unsubscribe1

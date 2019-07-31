@@ -10,14 +10,14 @@ import Data.Profunctor (dimap)
 import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import Effect.Exception (throw)
-import SDOM (ArrayChannel(..), Gui, GuiEvent(..), SDOM, attach, array, text, text_)
-import SDOM.Components (textbox, checkbox)
-import SDOM.Elements as E
-import SDOM.Events as Events
-import SDOM.Attributes as A
+import Gui.SDOM (ArrayChannel(..), Gui, GuiEvent(..), SDOM, attach, array, text, text_)
+import Gui.SDOM.Components (textbox, checkbox)
+import Gui.SDOM.Elements as E
+import Gui.SDOM.Events as Events
+import Gui.SDOM.Attributes as A
 import Web.DOM.NonElementParentNode (getElementById)
 import Web.HTML (window)
-import Web.DOM (Element)
+import Web.DOM (Node)
 import Web.HTML.HTMLDocument (toNonElementParentNode)
 import Web.HTML.Window (document)
 import Unsafe.Coerce (unsafeCoerce)
@@ -37,7 +37,7 @@ emptyTask =
 
 task
   :: forall channel
-   . Gui Element (ArrayChannel Task channel) Task Task
+   . Gui Node (ArrayChannel Task channel) Task Task
 task = E.span_
   [ checkbox
       (\{ id } -> "task-" <> show id)
@@ -56,7 +56,7 @@ type TaskList =
 
 taskList
   :: forall channel
-   . Gui Element channel TaskList TaskList
+   . Gui Node channel TaskList TaskList
 taskList = dimap _.tasks { tasks: _ } $
     E.div_
       [ E.h1_ [ text_ "Task List" ]

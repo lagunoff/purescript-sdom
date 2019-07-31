@@ -1,18 +1,18 @@
-module SDOM.Components where
+module Gui.SDOM.Components where
 
 import Prelude
 
-import SDOM (Gui, GuiEvent(..), text_)
-import SDOM.Attributes as A
-import SDOM.Elements as E
-import SDOM.Events as Events
+import Gui.SDOM (Gui, GuiEvent(..), text_)
+import Gui.SDOM.Attributes as A
+import Gui.SDOM.Elements as E
+import Gui.SDOM.Events as Events
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM (Element)
+import Web.DOM (Node)
 
 -- | Render a textbox component whose model is a `String`.
 -- |
 -- | _Note_: the model type can easily be changed using a lens.
-textbox :: forall channel. Gui Element channel String String
+textbox :: forall channel. Gui Node channel String String
 textbox =
   E.input
     [ A.value \val -> val, Events.change \_ e -> EventStep \_ -> (unsafeCoerce e).target.value ]
@@ -30,7 +30,7 @@ checkbox
    . (model -> String)
   -> (model -> Boolean)
   -> (model -> Boolean -> model)
-  -> Gui Element channel model model
+  -> Gui Node channel model model
 checkbox name getChecked setChecked =
   E.span_
     [ E.input
@@ -61,7 +61,7 @@ select
    . (option -> { key :: String, label :: String })
   -> (String -> option)
   -> Array option
-  -> Gui Element channel option option
+  -> Gui Node channel option option
 select fromOption toOption options =
   E.select
     [ A.value \value -> (fromOption value).key
